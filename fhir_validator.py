@@ -1,7 +1,7 @@
 """
 FHIR Validation Agent
 =====================
-Validates FHIR XML using the official HL7 FHIR Validator CLI (validator_cli.jar),
+Validates FHIR XML using the official validator.fhir.org REST API,
 automatically fixes common errors, and maintains an audit log.
 """
 
@@ -53,73 +53,73 @@ class ValidationRun:
     info_count: int = 0
 
 
-# --- FHIR Validator (CLI wrapper) ---
+# --- FHIR Validator (validator.fhir.org REST API) ---
 
 class FHIRValidator:
-    """Wraps the public HAPI FHIR Validator REST API to bypass Native Java OOM limits."""
+    """Validates FHIR XML using the official validator.fhir.org OpenAPI endpoint."""
 
-    VALIDATOR_URL = "https://hapi.fhir.org/baseR4/Bundle/$validate"
+    # Official HL7 FHIR Validator REST API (https://validator.fhir.org/swagger-ui/index.html)
+    VALIDATOR_URL = "https://validator.fhir.org/validate"
 
     def __init__(self, project_dir: str = None):
         self.project_dir = project_dir or os.path.dirname(os.path.abspath(__file__))
 
     def validate_string(self, xml_string: str, fhir_version: str = "4.0.1") -> List[ValidationIssue]:
-        """Validate an XML string using the public HAPI FHIR REST API."""
+        """Validate a FHIR XML string via the official validator.fhir.org REST API."""
         try:
             with httpx.Client(timeout=120.0) as client:
                 response = client.post(
                     self.VALIDATOR_URL,
+                    params={"ig": f"hl7.fhir.r4.core#{fhir_version}"},
                     content=xml_string.encode('utf-8'),
-                    headers={"Content-Type": "application/xml", "Accept": "application/fhir+xml"}
+                    headers={
+                        "Content-Type": "application/xml",
+                        "Accept": "application/json"
+                    }
                 )
-            
-            # HAPI FHIR returns 200 OK or 422 Unprocessable Entity - both are acceptable OperationOutcome schemas!
-            if response.status_code not in (200, 422, 400):  
-                return [ValidationIssue("Fatal", "", f"Validator API error: HTTP {response.status_code} - {response.text}")]
-                
-            return self._parse_xml_outcome(response.text)
-            
+            if response.status_code not in (200, 400, 422):
+                return [ValidationIssue("Fatal", "", f"Validator API error: HTTP {response.status_code}")]
+            return self._parse_json_outcome(response.json())
         except Exception as e:
-            return [ValidationIssue("Fatal", "", f"Failed to reach validator API: {str(e)}")]
+            return [ValidationIssue("Fatal", "", f"Failed to reach validator.fhir.org: {str(e)}")]
 
-    def _parse_xml_outcome(self, xml_str: str) -> List[ValidationIssue]:
-        """Parse the OperationOutcome XML natively returned by HAPI FHIR."""
+    def _parse_json_outcome(self, outcome: dict) -> List[ValidationIssue]:
+        """Parse the OperationOutcome JSON returned by validator.fhir.org."""
         issues = []
         try:
-            # Strip standard namespaces locally to simplify XPath finding
-            xml_str = re.sub(r'\sxmlns="[^"]+"', '', xml_str, count=1)
-            root = ET.fromstring(xml_str)
-            
-            for issue_node in root.findall('.//issue'):
-                sev_node = issue_node.find('severity')
-                severity = sev_node.get('value').capitalize() if sev_node is not None else "Information"
+            for issue in outcome.get("issue", []):
+                severity = issue.get("severity", "information").capitalize()
                 if severity == "Fatal": severity = "Error"
-                
-                diag_node = issue_node.find('diagnostics')
-                message = diag_node.get('value') if diag_node is not None else "Unknown issue"
-                
-                # Locating precise document lines
-                line_ext = issue_node.find('.//extension[@url="http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line"]/valueInteger')
-                col_ext = issue_node.find('.//extension[@url="http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col"]/valueInteger')
-                
-                line_num = int(line_ext.get('value')) if line_ext is not None else -1
-                col_num = int(col_ext.get('value')) if col_ext is not None else -1
-                
-                # Extract rule constraint logic
+
+                # Message text
+                details = issue.get("details", {})
+                message = details.get("text", issue.get("diagnostics", "Unknown issue"))
+
+                # Location / expression
+                expressions = issue.get("expression", [])
+                location = expressions[0] if expressions else ""
+                if not location:
+                    locations = issue.get("location", [])
+                    location = locations[0] if locations else ""
+
+                # Rule / code
                 rule = ""
-                code_node = issue_node.find('.//details/coding/code')
-                if code_node is not None:
-                    rule = code_node.get('value', '')
-                    # Cleanup long profile rule paths
-                    if "#" in rule: rule = rule.split("#")[-1]
-                
-                # Path expression
-                loc_node = issue_node.find('expression')
-                if loc_node is None:
-                    loc_node = issue_node.find('location')
-                    
-                location = loc_node.get('value') if loc_node is not None else ""
-                
+                codings = details.get("coding", [])
+                if codings:
+                    rule = codings[0].get("code", "")
+                    if "#" in rule:
+                        rule = rule.split("#")[-1]
+
+                # Line/col from extensions
+                line_num = -1
+                col_num = -1
+                for ext in issue.get("extension", []):
+                    url = ext.get("url", "")
+                    if "issue-line" in url:
+                        line_num = ext.get("valueInteger", -1)
+                    elif "issue-col" in url:
+                        col_num = ext.get("valueInteger", -1)
+
                 issues.append(ValidationIssue(
                     severity=severity,
                     location=location,
@@ -128,10 +128,8 @@ class FHIRValidator:
                     line=line_num,
                     col=col_num
                 ))
-                
         except Exception as e:
-            return [ValidationIssue("Fatal", "", f"XML Parsing failed on validator response: {str(e)}")]
-
+            return [ValidationIssue("Fatal", "", f"Failed to parse validator response: {str(e)}")]
         return issues
 
 
