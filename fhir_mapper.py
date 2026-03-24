@@ -447,24 +447,20 @@ def _json_to_xml(data: Union[Dict, List], root_tag: str) -> str:
         xml_s = f"<{tag}"
         if tag == root_tag: xml_s += ' xmlns="http://hl7.org/fhir"'
         xml_s += ">"
+
+        inner_tag = d.get("resourceType") if isinstance(d, dict) else None
+        if inner_tag and tag != root_tag:
+            xml_s += f"<{inner_tag}>"
         
         for k, v in d.items():
             if k == "resourceType": continue
             if isinstance(v, list):
                 for item in v:
-                    # FIX: If item is a CompositionSection (as dict), we need to handle it.
-                    # The tag for list items depends on the field name. 
-                    # In FHIR, 'section' field contains a list of 'section' elements.
-                    # So the tag should be 'section' (singular) for each item.
-                    
-                    item_tag = k # Default to field name, e.g. "entry", "section" -> <section>...
-                    
-                    # Special case: FHIR arrays often use the singular form of the field name as the tag?
-                    # No, in XML: <section>...</section> <section>...</section>
-                    # If field is 'section', items are <section>.
-                    # If field is 'entry', items are <entry>.
-                    
-                    xml_s += dict_to_xml(item if isinstance(item, dict) else {"value": item}, item_tag)
+                    item_tag = k 
+                    if isinstance(item, dict):
+                        xml_s += dict_to_xml(item, item_tag)
+                    else:
+                        xml_s += f"<{item_tag} value=\"{str(item)}\"/>"
             elif isinstance(v, dict):
                 xml_s += dict_to_xml(v, k)
             elif k == "div": 
@@ -472,6 +468,9 @@ def _json_to_xml(data: Union[Dict, List], root_tag: str) -> str:
             else:
                 xml_s += f'<{k} value="{str(v)}"/>'
         
+        if inner_tag and tag != root_tag:
+            xml_s += f"</{inner_tag}>"
+
         xml_s += f"</{tag}>"
         return xml_s
         

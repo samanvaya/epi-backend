@@ -69,14 +69,13 @@ class FHIRValidator:
 
     def validate_string(self, xml_string: str, fhir_version: str = "4.0.1") -> List[ValidationIssue]:
         """Validate FHIR XML — tries validator.fhir.org first, falls back to HAPI FHIR."""
-        # Try validator.fhir.org via multipart (as used by its Swagger UI)
+        # Try validator.fhir.org via raw body
         try:
             with httpx.Client(timeout=120.0) as client:
                 response = client.post(
-                    self.VALIDATOR_URL,
-                    params={"ig": f"hl7.fhir.r4.core#{fhir_version}"},
-                    files={"resource": ("resource.xml", xml_string.encode("utf-8"), "application/fhir+xml")},
-                    headers={"Accept": "application/json"}
+                    f"{self.VALIDATOR_URL}?ig=hl7.fhir.r4.core#{fhir_version}",
+                    data=xml_string.encode("utf-8"),
+                    headers={"Content-Type": "application/fhir+xml", "Accept": "application/json"}
                 )
             if response.status_code == 200:
                 return self._parse_json_outcome(response.json())
@@ -89,7 +88,7 @@ class FHIRValidator:
             with httpx.Client(timeout=120.0) as client:
                 response = client.post(
                     self.HAPI_URL,
-                    content=xml_string.encode("utf-8"),
+                    data=xml_string.encode("utf-8"),
                     headers={"Content-Type": "application/fhir+xml", "Accept": "application/fhir+xml"}
                 )
             if response.status_code in (200, 400, 422):

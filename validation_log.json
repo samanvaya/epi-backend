@@ -1,54 +1,405 @@
 {
-  "generated_at": "2026-03-24T10:17:09.855768",
-  "total_iterations": 2,
+  "generated_at": "2026-03-24T15:18:14.305858",
+  "total_iterations": 1,
   "runs": [
     {
       "iteration": 1,
-      "timestamp": "2026-03-24T10:17:08.452653",
-      "error_count": 1,
-      "warning_count": 0,
-      "info_count": 0,
-      "issues": [
-        {
-          "severity": "Fatal",
-          "location": "",
-          "message": "HAPI FHIR API error: HTTP 500",
-          "rule": "",
-          "line": -1,
-          "col": -1
-        }
-      ],
-      "fixes_applied": [
-        {
-          "rule": "XHTML_SELF_CLOSING",
-          "location": "<meta> elements",
-          "description": "Converted 1 <meta> to self-closing <meta/> for XHTML compliance",
-          "before_snippet": "",
-          "after_snippet": ""
-        },
-        {
-          "rule": "XHTML_UNCLOSED_TAG",
-          "location": "<a> elements",
-          "description": "Added 20 missing </a> closing tag(s)",
-          "before_snippet": "",
-          "after_snippet": ""
-        }
-      ]
-    },
-    {
-      "iteration": 2,
-      "timestamp": "2026-03-24T10:17:09.852891",
-      "error_count": 1,
-      "warning_count": 0,
-      "info_count": 0,
+      "timestamp": "2026-03-24T15:18:14.303325",
+      "error_count": 33,
+      "warning_count": 15,
+      "info_count": 1,
       "issues": [
         {
           "severity": "Error",
-          "location": "",
-          "message": "HAPI-0450: Failed to parse request body as XML resource. Error was: HAPI-1852: Failed to parse XML content: Unexpected close tag </meta>; expected </Composition>.\n at [row,col {unknown-source}]: [17,7]",
+          "location": "/f:Composition/f:subject/f:extension",
+          "message": "Undefined element 'url' at /f:Composition/f:subject/f:extension",
           "rule": "",
+          "line": 20,
+          "col": 61
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.type",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155538'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 11,
+          "col": 8
+        },
+        {
+          "severity": "Information",
+          "location": "Composition.type",
+          "message": "None of the codings provided are in the value set 'FHIR Document Type Codes' (http://hl7.org/fhir/ValueSet/doc-typecodes|4.0.1), and a coding is recommended to come from this value set (codes = https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155538)",
+          "rule": "Terminology_TX_NoValid_3_CC",
+          "line": 11,
+          "col": 8
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.subject.extension[0]",
+          "message": "Extension.url is required in order to identify, use and validate the extension",
+          "rule": "Extension_EXT_Url_NotFound",
           "line": -1,
           "col": -1
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.subject.extension[0]",
+          "message": "Extension.url: minimum required = 1, but only found 0 (from http://hl7.org/fhir/StructureDefinition/Extension|4.0.1)",
+          "rule": "Validation_VAL_Profile_Minimum",
+          "line": 19,
+          "col": 14
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.section[0].code",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155531'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 36,
+          "col": 9
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.section[1].code",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155532'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 55,
+          "col": 9
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[1].text.div",
+          "message": "Constraint failed: txt-1: 'The narrative SHALL contain only the basic html formatting elements and attributes described in chapters 7-11 (except section 4 of chapter 9) and 15 of the HTML 4.0 standard, <a> elements (either name or href), images and internally contained style attributes'",
+          "rule": "txt-1",
+          "line": 64,
+          "col": 46
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[1].text.div",
+          "message": "Invalid element name in the XHTML ('u')",
+          "rule": "XHTML_XHTML_Element_Illegal",
+          "line": 64,
+          "col": 46
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.section[2].code",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155533'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 79,
+          "col": 9
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.section[3].code",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155534'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 99,
+          "col": 9
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.section[3].section[0].code",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155535'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 117,
+          "col": 10
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.section[3].section[1].code",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155536'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 136,
+          "col": 10
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[3].section[1].text.div",
+          "message": "Constraint failed: txt-1: 'The narrative SHALL contain only the basic html formatting elements and attributes described in chapters 7-11 (except section 4 of chapter 9) and 15 of the HTML 4.0 standard, <a> elements (either name or href), images and internally contained style attributes'",
+          "rule": "txt-1",
+          "line": 145,
+          "col": 47
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[3].section[1].text.div",
+          "message": "Invalid element name in the XHTML ('u')",
+          "rule": "XHTML_XHTML_Element_Illegal",
+          "line": 145,
+          "col": 47
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.section[3].section[2].code",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155537'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 188,
+          "col": 10
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.section[3].section[3].code",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155538'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 207,
+          "col": 10
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[3].section[3].text.div",
+          "message": "Constraint failed: txt-1: 'The narrative SHALL contain only the basic html formatting elements and attributes described in chapters 7-11 (except section 4 of chapter 9) and 15 of the HTML 4.0 standard, <a> elements (either name or href), images and internally contained style attributes'",
+          "rule": "txt-1",
+          "line": 216,
+          "col": 47
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[3].section[3].text.div",
+          "message": "Invalid element name in the XHTML ('u')",
+          "rule": "XHTML_XHTML_Element_Illegal",
+          "line": 216,
+          "col": 47
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[3].section[4].text.div",
+          "message": "Constraint failed: txt-1: 'The narrative SHALL contain only the basic html formatting elements and attributes described in chapters 7-11 (except section 4 of chapter 9) and 15 of the HTML 4.0 standard, <a> elements (either name or href), images and internally contained style attributes'",
+          "rule": "txt-1",
+          "line": 259,
+          "col": 47
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[3].section[4].text.div",
+          "message": "Invalid element name in the XHTML ('u')",
+          "rule": "XHTML_XHTML_Element_Illegal",
+          "line": 259,
+          "col": 47
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[3].section[5].text.div",
+          "message": "Constraint failed: txt-1: 'The narrative SHALL contain only the basic html formatting elements and attributes described in chapters 7-11 (except section 4 of chapter 9) and 15 of the HTML 4.0 standard, <a> elements (either name or href), images and internally contained style attributes'",
+          "rule": "txt-1",
+          "line": 311,
+          "col": 47
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[3].section[5].text.div",
+          "message": "Invalid element name in the XHTML ('u')",
+          "rule": "XHTML_XHTML_Element_Illegal",
+          "line": 311,
+          "col": 47
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.section[3].section[7].code",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155542'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 358,
+          "col": 10
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[3].section[7].text.div",
+          "message": "Constraint failed: txt-1: 'The narrative SHALL contain only the basic html formatting elements and attributes described in chapters 7-11 (except section 4 of chapter 9) and 15 of the HTML 4.0 standard, <a> elements (either name or href), images and internally contained style attributes'",
+          "rule": "txt-1",
+          "line": 367,
+          "col": 47
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[3].section[7].text.div",
+          "message": "Invalid element name in the XHTML ('u')",
+          "rule": "XHTML_XHTML_Element_Illegal",
+          "line": 367,
+          "col": 47
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.section[4].code",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155543'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 492,
+          "col": 9
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[4].section[0].text.div",
+          "message": "Constraint failed: txt-1: 'The narrative SHALL contain only the basic html formatting elements and attributes described in chapters 7-11 (except section 4 of chapter 9) and 15 of the HTML 4.0 standard, <a> elements (either name or href), images and internally contained style attributes'",
+          "rule": "txt-1",
+          "line": 512,
+          "col": 47
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[4].section[0].text.div",
+          "message": "Invalid element name in the XHTML ('u')",
+          "rule": "XHTML_XHTML_Element_Illegal",
+          "line": 512,
+          "col": 47
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[4].section[1].text.div",
+          "message": "Constraint failed: txt-1: 'The narrative SHALL contain only the basic html formatting elements and attributes described in chapters 7-11 (except section 4 of chapter 9) and 15 of the HTML 4.0 standard, <a> elements (either name or href), images and internally contained style attributes'",
+          "rule": "txt-1",
+          "line": 735,
+          "col": 47
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[4].section[1].text.div",
+          "message": "Invalid element name in the XHTML ('u')",
+          "rule": "XHTML_XHTML_Element_Illegal",
+          "line": 735,
+          "col": 47
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[4].section[2].text.div",
+          "message": "Constraint failed: txt-1: 'The narrative SHALL contain only the basic html formatting elements and attributes described in chapters 7-11 (except section 4 of chapter 9) and 15 of the HTML 4.0 standard, <a> elements (either name or href), images and internally contained style attributes'",
+          "rule": "txt-1",
+          "line": 840,
+          "col": 47
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[4].section[2].text.div",
+          "message": "Invalid element name in the XHTML ('u')",
+          "rule": "XHTML_XHTML_Element_Illegal",
+          "line": 840,
+          "col": 47
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.section[5].code",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155544'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 880,
+          "col": 9
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.section[5].section[0].code",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155545'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 898,
+          "col": 10
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[5].section[0].text.div",
+          "message": "Constraint failed: txt-1: 'The narrative SHALL contain only the basic html formatting elements and attributes described in chapters 7-11 (except section 4 of chapter 9) and 15 of the HTML 4.0 standard, <a> elements (either name or href), images and internally contained style attributes'",
+          "rule": "txt-1",
+          "line": 907,
+          "col": 47
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[5].section[0].text.div",
+          "message": "Invalid element name in the XHTML ('u')",
+          "rule": "XHTML_XHTML_Element_Illegal",
+          "line": 907,
+          "col": 47
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition.section[6].code",
+          "message": "CodeSystem is unknown and can't be validated: https://spor.ema.europa.eu/v1/lists/100000155531-100000155538 for 'https://spor.ema.europa.eu/v1/lists/100000155531-100000155538#100000155551'",
+          "rule": "Terminology_PassThrough_TX_Message",
+          "line": 997,
+          "col": 9
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[9].text.div",
+          "message": "Constraint failed: txt-1: 'The narrative SHALL contain only the basic html formatting elements and attributes described in chapters 7-11 (except section 4 of chapter 9) and 15 of the HTML 4.0 standard, <a> elements (either name or href), images and internally contained style attributes'",
+          "rule": "txt-1",
+          "line": 1045,
+          "col": 46
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.section[9].text.div",
+          "message": "Invalid element name in the XHTML ('u')",
+          "rule": "XHTML_XHTML_Element_Illegal",
+          "line": 1045,
+          "col": 46
+        },
+        {
+          "severity": "Warning",
+          "location": "Composition",
+          "message": "Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "rule": "dom-6",
+          "line": 2,
+          "col": 42
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.meta.profile[0]",
+          "message": "Profile reference 'http://ema.europa.eu/fhir/StructureDefinition/EUEpiComposition' has not been checked because it could not be found, and the validator is set to not fetch unknown profiles",
+          "rule": "VALIDATION_VAL_PROFILE_UNKNOWN_NOT_POLICY",
+          "line": 2,
+          "col": 42
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.meta.profile[1]",
+          "message": "Profile reference 'http://ema.europa.eu/fhir/StructureDefinition/EUEpiCompositionCAP' has not been checked because it could not be found, and the validator is set to not fetch unknown profiles",
+          "rule": "VALIDATION_VAL_PROFILE_UNKNOWN_NOT_POLICY",
+          "line": 2,
+          "col": 42
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.meta.profile[2]",
+          "message": "Profile reference 'http://ema.europa.eu/fhir/StructureDefinition/EUEpiCompositionSmPC' has not been checked because it could not be found, and the validator is set to not fetch unknown profiles",
+          "rule": "VALIDATION_VAL_PROFILE_UNKNOWN_NOT_POLICY",
+          "line": 2,
+          "col": 42
+        },
+        {
+          "severity": "Error",
+          "location": "Composition.meta.profile[3]",
+          "message": "Profile reference 'http://ema.europa.eu/fhir/StructureDefinition/EUQRD-CAP-template-new-SmPC-en' has not been checked because it could not be found, and the validator is set to not fetch unknown profiles",
+          "rule": "VALIDATION_VAL_PROFILE_UNKNOWN_NOT_POLICY",
+          "line": 2,
+          "col": 42
+        },
+        {
+          "severity": "Error",
+          "location": "Line[0] Col[0]",
+          "message": "Invalid profile. Failed to retrieve profile with url=http://ema.europa.eu/fhir/StructureDefinition/EUEpiComposition",
+          "rule": "Validation_VAL_Profile_Unknown",
+          "line": 0,
+          "col": 0
+        },
+        {
+          "severity": "Error",
+          "location": "Line[0] Col[0]",
+          "message": "Invalid profile. Failed to retrieve profile with url=http://ema.europa.eu/fhir/StructureDefinition/EUEpiCompositionCAP",
+          "rule": "Validation_VAL_Profile_Unknown",
+          "line": 0,
+          "col": 0
+        },
+        {
+          "severity": "Error",
+          "location": "Line[0] Col[0]",
+          "message": "Invalid profile. Failed to retrieve profile with url=http://ema.europa.eu/fhir/StructureDefinition/EUEpiCompositionSmPC",
+          "rule": "Validation_VAL_Profile_Unknown",
+          "line": 0,
+          "col": 0
+        },
+        {
+          "severity": "Error",
+          "location": "Line[0] Col[0]",
+          "message": "Invalid profile. Failed to retrieve profile with url=http://ema.europa.eu/fhir/StructureDefinition/EUQRD-CAP-template-new-SmPC-en",
+          "rule": "Validation_VAL_Profile_Unknown",
+          "line": 0,
+          "col": 0
         }
       ],
       "fixes_applied": []
