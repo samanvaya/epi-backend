@@ -246,7 +246,8 @@ class AutoFixer:
     def _fix_self_closing_tags(self, xml: str, issues: List[ValidationIssue]) -> Tuple[str, List[FixAction]]:
         """Convert HTML void elements to XHTML self-closing form."""
         fixes = []
-        void_tags = ['br', 'hr', 'img', 'input', 'meta', 'link']
+        # Excluded 'meta' and 'link' because they conflict with core FHIR structural elements
+        void_tags = ['br', 'hr', 'img']
 
         for tag in void_tags:
             # Match <br>, <br >, <hr class="x"> but NOT already <br/> or <br />
