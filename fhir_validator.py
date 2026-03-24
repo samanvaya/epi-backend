@@ -64,24 +64,39 @@ class FHIRValidator:
     def __init__(self, project_dir: str = None):
         self.project_dir = project_dir or os.path.dirname(os.path.abspath(__file__))
 
+    # Fallback: HAPI FHIR public server
+    HAPI_URL = "https://hapi.fhir.org/baseR4/Bundle/$validate"
+
     def validate_string(self, xml_string: str, fhir_version: str = "4.0.1") -> List[ValidationIssue]:
-        """Validate a FHIR XML string via the official validator.fhir.org REST API."""
+        """Validate FHIR XML — tries validator.fhir.org first, falls back to HAPI FHIR."""
+        # Try validator.fhir.org via multipart (as used by its Swagger UI)
         try:
             with httpx.Client(timeout=120.0) as client:
                 response = client.post(
                     self.VALIDATOR_URL,
                     params={"ig": f"hl7.fhir.r4.core#{fhir_version}"},
-                    content=xml_string.encode('utf-8'),
-                    headers={
-                        "Content-Type": "application/xml",
-                        "Accept": "application/json"
-                    }
+                    files={"resource": ("resource.xml", xml_string.encode("utf-8"), "application/fhir+xml")},
+                    headers={"Accept": "application/json"}
                 )
-            if response.status_code not in (200, 400, 422):
-                return [ValidationIssue("Fatal", "", f"Validator API error: HTTP {response.status_code}")]
-            return self._parse_json_outcome(response.json())
+            if response.status_code == 200:
+                return self._parse_json_outcome(response.json())
+            # 415 or other — fall through to HAPI
+        except Exception:
+            pass
+
+        # Fallback: HAPI FHIR public R4 server
+        try:
+            with httpx.Client(timeout=120.0) as client:
+                response = client.post(
+                    self.HAPI_URL,
+                    content=xml_string.encode("utf-8"),
+                    headers={"Content-Type": "application/fhir+xml", "Accept": "application/fhir+xml"}
+                )
+            if response.status_code in (200, 400, 422):
+                return self._parse_xml_outcome(response.text)
+            return [ValidationIssue("Fatal", "", f"HAPI FHIR API error: HTTP {response.status_code}")]
         except Exception as e:
-            return [ValidationIssue("Fatal", "", f"Failed to reach validator.fhir.org: {str(e)}")]
+            return [ValidationIssue("Fatal", "", f"Both validator APIs failed: {str(e)}")]
 
     def _parse_json_outcome(self, outcome: dict) -> List[ValidationIssue]:
         """Parse the OperationOutcome JSON returned by validator.fhir.org."""
@@ -130,6 +145,44 @@ class FHIRValidator:
                 ))
         except Exception as e:
             return [ValidationIssue("Fatal", "", f"Failed to parse validator response: {str(e)}")]
+        return issues
+
+    def _parse_xml_outcome(self, xml_str: str) -> List[ValidationIssue]:
+        """Parse the OperationOutcome XML returned by HAPI FHIR."""
+        issues = []
+        try:
+            xml_str = re.sub(r'\sxmlns="[^"]+"', '', xml_str, count=1)
+            root = ET.fromstring(xml_str)
+            for issue_node in root.findall('.//issue'):
+                sev_node = issue_node.find('severity')
+                severity = sev_node.get('value', 'information').capitalize() if sev_node is not None else "Information"
+                if severity == "Fatal": severity = "Error"
+
+                diag_node = issue_node.find('diagnostics')
+                message = diag_node.get('value', 'Unknown issue') if diag_node is not None else "Unknown issue"
+
+                line_ext = issue_node.find('.//extension[@url="http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line"]/valueInteger')
+                col_ext = issue_node.find('.//extension[@url="http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col"]/valueInteger')
+                line_num = int(line_ext.get('value')) if line_ext is not None else -1
+                col_num = int(col_ext.get('value')) if col_ext is not None else -1
+
+                rule = ""
+                code_node = issue_node.find('.//details/coding/code')
+                if code_node is not None:
+                    rule = code_node.get('value', '')
+                    if "#" in rule: rule = rule.split("#")[-1]
+
+                loc_node = issue_node.find('expression')
+                if loc_node is None:
+                    loc_node = issue_node.find('location')
+                location = loc_node.get('value', '') if loc_node is not None else ""
+
+                issues.append(ValidationIssue(
+                    severity=severity, location=location, message=message,
+                    rule=rule, line=line_num, col=col_num
+                ))
+        except Exception as e:
+            return [ValidationIssue("Fatal", "", f"Failed to parse HAPI response: {str(e)}")]
         return issues
 
 

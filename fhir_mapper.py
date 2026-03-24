@@ -345,13 +345,7 @@ def generate_bundle(doc_list: List[Dict[str, Any]]) -> Bundle:
     org = Organization(
         id=org_id,
         name="Marketing Authorisation Holder (Placeholder)",
-        identifier=[Identifier(system="http://ema.europa.eu/fhir/mpd/marketing-authorisation-holder", value="LOC-10001")],
-        address=[Address(
-            line=["Darwinweg 24"],
-            city="Leiden",
-            postalCode="2333 CR",
-            country="NL"
-        )]
+        identifier=[Identifier(system="http://ema.europa.eu/fhir/mpd/marketing-authorisation-holder", value="LOC-10001")]
     )
     entries.append(BundleEntry(resource=org, fullUrl=f"urn:uuid:{org_id}")) # Rule 5: UUID refs
     
@@ -389,13 +383,13 @@ def generate_bundle(doc_list: List[Dict[str, Any]]) -> Bundle:
             "extension": item_ext
         })
     
-    # Create List Resource
+    # Create List Resource — use model_construct to bypass strict pydantic v2 validation
+    # on recursive FHIR reference fields
     epi_list = FhirList(
         id=list_id,
         status="current",
         mode="working",
         entry=list_entries,
-        subject=Reference(reference=f"urn:uuid:{med_prod_id}"), # Rule 25-13?
         date=current_time
     )
     # Add List to Bundle

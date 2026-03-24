@@ -1,0 +1,57 @@
+{
+  "generated_at": "2026-03-24T10:17:09.855768",
+  "total_iterations": 2,
+  "runs": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-03-24T10:17:08.452653",
+      "error_count": 1,
+      "warning_count": 0,
+      "info_count": 0,
+      "issues": [
+        {
+          "severity": "Fatal",
+          "location": "",
+          "message": "HAPI FHIR API error: HTTP 500",
+          "rule": "",
+          "line": -1,
+          "col": -1
+        }
+      ],
+      "fixes_applied": [
+        {
+          "rule": "XHTML_SELF_CLOSING",
+          "location": "<meta> elements",
+          "description": "Converted 1 <meta> to self-closing <meta/> for XHTML compliance",
+          "before_snippet": "",
+          "after_snippet": ""
+        },
+        {
+          "rule": "XHTML_UNCLOSED_TAG",
+          "location": "<a> elements",
+          "description": "Added 20 missing </a> closing tag(s)",
+          "before_snippet": "",
+          "after_snippet": ""
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "timestamp": "2026-03-24T10:17:09.852891",
+      "error_count": 1,
+      "warning_count": 0,
+      "info_count": 0,
+      "issues": [
+        {
+          "severity": "Error",
+          "location": "",
+          "message": "HAPI-0450: Failed to parse request body as XML resource. Error was: HAPI-1852: Failed to parse XML content: Unexpected close tag </meta>; expected </Composition>.\n at [row,col {unknown-source}]: [17,7]",
+          "rule": "",
+          "line": -1,
+          "col": -1
+        }
+      ],
+      "fixes_applied": []
+    }
+  ]
+}
