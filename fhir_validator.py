@@ -294,7 +294,8 @@ class AutoFixer:
         inline_tags = ['b', 'i', 'u', 'em', 'strong', 'span', 'a', 'sub', 'sup']
 
         for tag in inline_tags:
-            open_pattern = re.compile(rf'<{tag}(?:\s[^>]*)?>',  re.IGNORECASE)
+            # Match <tag> or <tag attr="x"> but NOT <tag/> or <tag attr="x"/>
+            open_pattern = re.compile(rf'<{tag}(?:\s[^>]*)?(?<!/)>',  re.IGNORECASE)
             close_pattern = re.compile(rf'</{tag}\s*>', re.IGNORECASE)
 
             open_count = len(open_pattern.findall(xml))
