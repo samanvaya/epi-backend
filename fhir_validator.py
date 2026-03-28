@@ -98,16 +98,54 @@ class FHIRValidator:
         return result
 
     def validate_string(self, xml_string: str, fhir_version: str = "4.0.1") -> List["ValidationIssue"]:
-        """Validate FHIR XML — tries validator.fhir.org first, falls back to HAPI FHIR.
+        """Validate FHIR XML using local Java CLI if available, otherwise fallback to web APIs."""
+        import subprocess
+        import tempfile
+        import json
+        import os
 
-        Sends both the base R4 core IG AND the EMA ePI IG so that EMA-specific
-        StructureDefinitions (EUEpiComposition, EUEpiBundle, etc.) can be resolved.
-        Profile-not-found issues are downgraded to Warnings to avoid blocking the
-        pipeline when the EMA IG is unavailable remotely.
-        """
-        # Build query: base R4 core + EMA ePI IG
-        igs = f"hl7.fhir.r4.core#{fhir_version}&ig={self.EMA_EPI_IG}"
-        # Try validator.fhir.org via raw body
+        # Standard context for EMA validation
+        ig_pkg = "hl7.eu.fhir.epil"
+        jar_path = os.path.join(self.project_dir, "validator_cli.jar")
+
+        # 1. Primary: Local Java CLI Validator (Handles Context and IG natively)
+        if os.path.exists(jar_path):
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".xml", mode="w", encoding="utf-8") as tmp_xml:
+                tmp_xml.write(xml_string)
+                xml_path = tmp_xml.name
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode="w") as tmp_json:
+                json_path = tmp_json.name
+
+            try:
+                # Execution command
+                cmd = [
+                    "java", "-jar", jar_path,
+                    xml_path,
+                    "-version", fhir_version,
+                    "-ig", ig_pkg,
+                    "-output", json_path
+                ]
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+                
+                # We ignore exit code since validator returns non-zero if there are validation errors.
+                # Just read the json output.
+                if os.path.exists(json_path):
+                    with open(json_path, "r", encoding="utf-8") as f:
+                        out_data = json.load(f)
+                    issues = self._parse_json_outcome(out_data)
+                    # Do not filter errors because the CLI natively knows these CodeSystems
+                    return issues
+                else:
+                    return [ValidationIssue("Fatal", "", f"CLI Validator failed internally: {proc.stderr}")]
+            except Exception as e:
+                return [ValidationIssue("Fatal", "", f"CLI Integration error: {str(e)}")]
+            finally:
+                if os.path.exists(xml_path): os.remove(xml_path)
+                if os.path.exists(json_path): os.remove(json_path)
+
+        # 2. Fallback: Try validator.fhir.org via raw HTTP if Java logic failed/absent
+        igs = f"hl7.fhir.r4.core#{fhir_version}&ig={ig_pkg}"
         try:
             with httpx.Client(timeout=120.0) as client:
                 response = client.post(
@@ -118,11 +156,10 @@ class FHIRValidator:
             if response.status_code == 200:
                 issues = self._parse_json_outcome(response.json())
                 return self._filter_config_issues(issues)
-            # 415 or other — fall through to HAPI
         except Exception:
             pass
 
-        # Fallback: HAPI FHIR public R4 server
+        # 3. Fallback: HAPI FHIR public R4 server
         try:
             with httpx.Client(timeout=120.0) as client:
                 response = client.post(
