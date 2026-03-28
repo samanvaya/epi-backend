@@ -118,9 +118,12 @@ class FHIRValidator:
                 json_path = tmp_json.name
 
             try:
-                # Execution command
+                # Execution command with memory constraints to prevent Render container OOM crashes
                 cmd = [
-                    "java", "-jar", jar_path,
+                    "java", 
+                    "-Xmx300m", 
+                    "-XX:+UseSerialGC", 
+                    "-jar", jar_path,
                     xml_path,
                     "-version", fhir_version,
                     "-ig", ig_pkg,
