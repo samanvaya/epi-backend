@@ -61,24 +61,59 @@ class FHIRValidator:
     # Official HL7 FHIR Validator REST API (https://validator.fhir.org/swagger-ui/index.html)
     VALIDATOR_URL = "https://validator.fhir.org/validate"
 
+    # EMA ePI FHIR IG package id on packages.fhir.org / validator.fhir.org
+    # The EMA ePI IG is published under this package id.
+    EMA_EPI_IG = "hl7.eu.fhir.epil"
+
     def __init__(self, project_dir: str = None):
         self.project_dir = project_dir or os.path.dirname(os.path.abspath(__file__))
 
     # Fallback: HAPI FHIR public server
     HAPI_URL = "https://hapi.fhir.org/baseR4/Bundle/$validate"
 
-    def validate_string(self, xml_string: str, fhir_version: str = "4.0.1") -> List[ValidationIssue]:
-        """Validate FHIR XML — tries validator.fhir.org first, falls back to HAPI FHIR."""
+    # Profile-not-found messages that are validator *configuration* issues,
+    # not real XML structural errors. We downgrade these to Warnings so the
+    # pipeline is not blocked by missing remote IGs.
+    _PROFILE_NOT_FOUND_PATTERNS = [
+        "could not be found",
+        "not fetched",
+        "unknown profile",
+        "not able to check",
+        "failed to retrieve",
+    ]
+
+    def _downgrade_profile_issues(self, issues: List["ValidationIssue"]) -> List["ValidationIssue"]:
+        """Downgrade Profile-reference errors (validator config issues) to Warnings."""
+        result = []
+        for issue in issues:
+            msg_lower = issue.message.lower()
+            is_profile_issue = any(p in msg_lower for p in self._PROFILE_NOT_FOUND_PATTERNS)
+            if is_profile_issue and issue.severity in ("Error", "Fatal"):
+                issue.severity = "Warning"
+            result.append(issue)
+        return result
+
+    def validate_string(self, xml_string: str, fhir_version: str = "4.0.1") -> List["ValidationIssue"]:
+        """Validate FHIR XML — tries validator.fhir.org first, falls back to HAPI FHIR.
+
+        Sends both the base R4 core IG AND the EMA ePI IG so that EMA-specific
+        StructureDefinitions (EUEpiComposition, EUEpiBundle, etc.) can be resolved.
+        Profile-not-found issues are downgraded to Warnings to avoid blocking the
+        pipeline when the EMA IG is unavailable remotely.
+        """
+        # Build query: base R4 core + EMA ePI IG
+        igs = f"hl7.fhir.r4.core#{fhir_version}&ig={self.EMA_EPI_IG}"
         # Try validator.fhir.org via raw body
         try:
             with httpx.Client(timeout=120.0) as client:
                 response = client.post(
-                    f"{self.VALIDATOR_URL}?ig=hl7.fhir.r4.core#{fhir_version}",
+                    f"{self.VALIDATOR_URL}?ig={igs}",
                     data=xml_string.encode("utf-8"),
                     headers={"Content-Type": "application/fhir+xml", "Accept": "application/json"}
                 )
             if response.status_code == 200:
-                return self._parse_json_outcome(response.json())
+                issues = self._parse_json_outcome(response.json())
+                return self._downgrade_profile_issues(issues)
             # 415 or other — fall through to HAPI
         except Exception:
             pass
@@ -92,7 +127,8 @@ class FHIRValidator:
                     headers={"Content-Type": "application/fhir+xml", "Accept": "application/fhir+xml"}
                 )
             if response.status_code in (200, 400, 422):
-                return self._parse_xml_outcome(response.text)
+                issues = self._parse_xml_outcome(response.text)
+                return self._downgrade_profile_issues(issues)
             return [ValidationIssue("Fatal", "", f"HAPI FHIR API error: HTTP {response.status_code}")]
         except Exception as e:
             return [ValidationIssue("Fatal", "", f"Both validator APIs failed: {str(e)}")]

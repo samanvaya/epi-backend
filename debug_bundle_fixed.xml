@@ -1,0 +1,1133 @@
+<?xml version="1.0" ?>
+<Bundle xmlns="http://hl7.org/fhir">
+	<id value="c83ba13f-e582-4e2b-9214-5b24c6bee774"/>
+	<meta>
+		<profile value="http://ema.europa.eu/fhir/StructureDefinition/EUEpiBundle"/>
+	</meta>
+	<identifier>
+		<system value="urn:uuid"/>
+		<value value="c83ba13f-e582-4e2b-9214-5b24c6bee774"/>
+	</identifier>
+	<type value="collection"/>
+	<timestamp value="2026-03-24T14:18:14.371093Z"/>
+	<entry>
+		<fullUrl value="urn:uuid:cb7dc662-7b97-4c2d-ae74-f6dc07d504cb"/>
+		<resource>
+			<List>
+				<id value="cb7dc662-7b97-4c2d-ae74-f6dc07d504cb"/>
+				<status value="current"/>
+				<mode value="working"/>
+				<date value="2026-03-24T14:18:14.371093Z"/>
+				<entry>
+					<extension>
+						<url value="http://ema.europa.eu/fhir/extension/language"/>
+						<valueCoding>
+							<system value="http://spor.ema.europa.eu/v1/100000072057"/>
+							<code value="100000072147"/>
+							<display value="English"/>
+						</valueCoding>
+					</extension>
+					<item>
+						<reference value="urn:uuid:69ec2f94-0d53-4e37-9bbd-ea95700a87ef"/>
+						<display value="SmPC - ANNEX I-final.docx"/>
+					</item>
+				</entry>
+			</List>
+		</resource>
+	</entry>
+	<entry>
+		<fullUrl value="urn:uuid:afb80cbb-5a54-4bee-9777-9c03ce916d68"/>
+		<resource>
+			<Organization>
+				<id value="afb80cbb-5a54-4bee-9777-9c03ce916d68"/>
+				<identifier>
+					<system value="http://ema.europa.eu/fhir/mpd/marketing-authorisation-holder"/>
+					<value value="LOC-10001"/>
+				</identifier>
+				<name value="Marketing Authorisation Holder (Placeholder)"/>
+			</Organization>
+		</resource>
+	</entry>
+	<entry>
+		<fullUrl value="urn:uuid:7ce17638-47ab-4d71-9e1c-06900a662a1f"/>
+		<resource>
+			<MedicinalProductDefinition>
+				<id value="7ce17638-47ab-4d71-9e1c-06900a662a1f"/>
+				<status>
+					<coding>
+						<system value="http://ema.europa.eu/fhir/mpd/status"/>
+						<code value="200000005004"/>
+						<display value="Current"/>
+					</coding>
+				</status>
+				<name>
+					<productName value="Placeholder Product 500mg Tablets"/>
+				</name>
+			</MedicinalProductDefinition>
+		</resource>
+	</entry>
+	<entry>
+		<fullUrl value="urn:uuid:69ec2f94-0d53-4e37-9bbd-ea95700a87ef"/>
+		<resource>
+			<Composition>
+				<id value="69ec2f94-0d53-4e37-9bbd-ea95700a87ef"/>
+				<meta>
+					<profile value="http://ema.europa.eu/fhir/StructureDefinition/EUEpiComposition"/>
+					<profile value="http://ema.europa.eu/fhir/StructureDefinition/EUEpiCompositionCAP"/>
+					<profile value="http://ema.europa.eu/fhir/StructureDefinition/EUEpiCompositionSmPC"/>
+					<profile value="http://ema.europa.eu/fhir/StructureDefinition/EUQRD-CAP-template-new-SmPC-en"/>
+				</meta>
+				<status value="final"/>
+				<type>
+					<coding>
+						<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+						<code value="100000155538"/>
+						<display value="SmPC"/>
+					</coding>
+				</type>
+				<subject>
+					<extension>
+						<url value="http://ema.europa.eu/fhir/extension/domain"/>
+						<valueCoding>
+							<system value="https://spor.ema.europa.eu/v1/100000000004"/>
+							<code value="100000000012"/>
+							<display value="H"/>
+						</valueCoding>
+					</extension>
+					<reference value="urn:uuid:7ce17638-47ab-4d71-9e1c-06900a662a1f"/>
+				</subject>
+				<date value="2026-03-24T14:18:14.372593Z"/>
+				<author>
+					<reference value="urn:uuid:afb80cbb-5a54-4bee-9777-9c03ce916d68"/>
+				</author>
+				<title value="SmPC - ANNEX I-final.docx"/>
+				<section>
+					<title value="1. NAME OF THE MEDICINAL PRODUCT"/>
+					<code>
+						<coding>
+							<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+							<code value="100000155531"/>
+							<display value="Name of the medicinal product"/>
+						</coding>
+					</code>
+					<text>
+						<status value="generated"/>
+						<div xmlns="http://www.w3.org/1999/xhtml">
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<h2>1. NAME OF THE MEDICINAL PRODUCT</h2>
+								<p>Joenja 70 mg film‑coated tablets</p>
+							</div>
+						</div>
+					</text>
+				</section>
+				<section>
+					<title value="2. QUALITATIVE AND QUANTITATIVE COMPOSITION"/>
+					<code>
+						<coding>
+							<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+							<code value="100000155532"/>
+							<display value="Qualitative and quantitative composition"/>
+						</coding>
+					</code>
+					<text>
+						<status value="generated"/>
+						<div xmlns="http://www.w3.org/1999/xhtml">
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<h2>2. QUALITATIVE AND QUANTITATIVE COMPOSITION</h2>
+								<p>Each film‑coated tablet contains leniolisib phosphate equivalent to 70 mg leniolisib.</p>
+								<p>
+									<u>Excipient(s) with known effect</u>
+								</p>
+								<p>Each tablet contains 241.16 mg of lactose monohydrate.</p>
+								<p>For the full list of excipients, see section 6.1.</p>
+							</div>
+						</div>
+					</text>
+				</section>
+				<section>
+					<title value="3. PHARMACEUTICAL FORM"/>
+					<code>
+						<coding>
+							<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+							<code value="100000155533"/>
+							<display value="Pharmaceutical form"/>
+						</coding>
+					</code>
+					<text>
+						<status value="generated"/>
+						<div xmlns="http://www.w3.org/1999/xhtml">
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<h2>3. PHARMACEUTICAL FORM</h2>
+								<p>Film‑coated tablet.</p>
+								<p>Yellow, oval‑shaped, biconvex, bevelled edge film‑coated tablet debossed with “70” on one side and “LNB” on the other side.</p>
+							</div>
+						</div>
+					</text>
+				</section>
+				<section>
+					<title value="4. CLINICAL PARTICULARS"/>
+					<code>
+						<coding>
+							<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+							<code value="100000155534"/>
+							<display value="Clinical particulars"/>
+						</coding>
+					</code>
+					<text>
+						<status value="generated"/>
+						<div xmlns="http://www.w3.org/1999/xhtml">
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<h2>4. CLINICAL PARTICULARS</h2>
+								<p/>
+							</div>
+						</div>
+					</text>
+					<section>
+						<title value="4.1 Therapeutic indications"/>
+						<code>
+							<coding>
+								<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+								<code value="100000155535"/>
+								<display value="Therapeutic indications"/>
+							</coding>
+						</code>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>4.1 Therapeutic indications</h2>
+									<p>Joenja is indicated for the treatment of activated phosphoinositide 3‑kinase delta syndrome (APDS) in adults and adolescents 12 years of age and older.</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="4.2 Posology and method of administration"/>
+						<code>
+							<coding>
+								<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+								<code value="100000155536"/>
+								<display value="Posology and method of administration"/>
+							</coding>
+						</code>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>4.2 Posology and method of administration</h2>
+									<p>Treatment must be initiated by a physician experienced in the management of primary immune deficiencies.</p>
+									<p>
+										<u>Posology</u>
+									</p>
+									<p>The recommended dose in adult and adolescent patients who weigh more than 45 kg is 70 mg leniolisib twice daily approximately 12 hours apart.</p>
+									<p>
+										<em>Missed dose</em>
+									</p>
+									<p>If a dose is missed by more than 6 hours, the patient should not take the missed dose but resume dosing at the next scheduled time.</p>
+									<p>If vomiting occurs within 1 hour after taking Joenja, take another Joenja tablet as soon as possible. If vomiting occurs more than 1 hour after dosing, do not take an additional dose.</p>
+									<p>
+										<u>Special populations</u>
+									</p>
+									<p>
+										<em>Elderly</em>
+									</p>
+									<p>The safety and efficacy of leniolisib in patients over the age of 65 years have not been established. No data are available.</p>
+									<p>
+										<em>Renal impairment</em>
+									</p>
+									<p>Leniolisib has not been studied in patients with renal impairment.</p>
+									<p>
+										<em>Hepatic impairment</em>
+									</p>
+									<p>Leniolisib has not been studied in patients with hepatic impairment. Use of Joenja in patients with moderate to severe hepatic impairment is not recommended.</p>
+									<p>
+										<em>Paediatric population</em>
+									</p>
+									<p>The safety and efficacy of Joenja in children aged less than 12 years or below the weight of 45 kg have not yet been established. No data are available.</p>
+									<p>
+										<u>Method of administration</u>
+									</p>
+									<p>Oral use.</p>
+									<p>The film‑coated tablet can be taken with or without food (see section 5.2).</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="4.3 Contraindications"/>
+						<code>
+							<coding>
+								<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+								<code value="100000155537"/>
+								<display value="Contraindications"/>
+							</coding>
+						</code>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>4.3 Contraindications</h2>
+									<p>Hypersensitivity to the active substance or to any of the excipients listed in section 6.1.</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="4.4 Special warnings and precautions for use"/>
+						<code>
+							<coding>
+								<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+								<code value="100000155538"/>
+								<display value="Special warnings and precautions for use"/>
+							</coding>
+						</code>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>4.4 Special warnings and precautions for use</h2>
+									<p>
+										<u>Combination with CYP3A4 inhibitors</u>
+									</p>
+									<p>Concomitant therapy with strong and moderate CYP3A4 inhibitors increased leniolisib exposure. Co-administered with strong CYP3A4 inhibitors should be avoided. If use of moderate or strong CYP3A4 inhibitors are required, it is recommended that Joenja be discontinued 2 days before administration of CYP3A4 inhibitor. Joenja may be restarted 7 days after CYP3A inhibitor discontinuation (see section 4.5).</p>
+									<p>
+										<u>Combination with CYP1A2 metabolised drugs with a narrow therapeutic index</u>
+									</p>
+									<p>
+										Time-dependent inhibition of CYP1A2 was observed in the presence of leniolisib 
+										<em>in vitro</em>
+										. Caution is advised if Joenja is used with drugs that are primarily metabolised by CYP1A2 and have a narrow therapeutic index (NTI). It is recommended to interrupt Joenja dosing for at least 2 days prior to initiating therapy with an NTI CYP1A2 substrate. Restart Joenja after 7 days of an adequate washout of the NTI CYP1A2 substrate (see section 4.5).
+									</p>
+									<p>
+										<u>Combination with BCRP, OATP1B1, and OATP1B3 substrates</u>
+									</p>
+									<p>The effect of leniolisib on BCRP, OATP1B1, and OATP1B3 substrates has not been studied clinically; however, an increase in systemic exposure of drugs that are substrates of these transporters cannot be excluded. Co-administration should be avoided.</p>
+									<p>
+										<u>Gastric acid reducing agents</u>
+									</p>
+									<p>For patients using antacids chronically, the antacid should be taken either 2 hours before or 2 hours after Joenja administration.</p>
+									<p>
+										<u>Women of childbearing potential</u>
+									</p>
+									<p>Women of childbearing potential must use highly effective contraception while taking Joenja (see section 4.6).</p>
+									<p>
+										<u>Lactose content</u>
+									</p>
+									<p>This medicine contains lactose. Patients with rare hereditary problems of galactose intolerance, total lactase deficiency, or glucose‑galactose malabsorption must not take this medicine.</p>
+									<p>
+										<u>Sodium content</u>
+									</p>
+									<p>This medicine contains less than 1 mmol sodium (23 mg) per film-coated tablet, that is to say essentially ‘sodium‑free’.</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="4.5 Interaction with other medicinal products and other forms of interaction"/>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>4.5 Interaction with other medicinal products and other forms of interaction</h2>
+									<p>
+										<u>Medicinal products affecting the pharmacokinetics of leniolisib</u>
+									</p>
+									<p>Leniolisib is cleared primarily through oxidative metabolism (primarily hydroxylation and dealkylation) by cytochrome P450 isoenzymes (predominantly CYP3A4, 95.4%). In a study of healthy adults, co‑administration of leniolisib and itraconazole, a strong CYP3A inhibitor, resulted in a 2‑fold increase in leniolisib exposure. Concomitant use of Joenja with strong CYP3A inhibitors should be avoided (see section 4.4).</p>
+									<p>Although co‑administration of leniolisib with strong and moderate CYP3A inducers decreased leniolisib exposure, no loss of efficacy is anticipated.</p>
+									<p>
+										<u>Combination with CYP1A2 metabolized drugs with a narrow therapeutic index</u>
+									</p>
+									<p>
+										Time-dependent (irreversible) inhibition of CYP1A2 was observed in the presence of leniolisib 
+										<em>in vitro</em>
+										. Clinically relevant interactions at the therapeutic dose of leniolisib (70 mg twice daily) could not be excluded for inhibition of CYP1A2.
+									</p>
+									<p>
+										<u>Drugs that may have their exposure altered by leniolisib</u>
+									</p>
+									<p>
+										The effect of leniolisib on BCRP, OATP1B1, and OATP1B3 substrates has not been studied clinically. 
+										<em>In vitro</em>
+										, leniolisib is a substrate and an inhibitor of the hepatic efflux transporters OATP1B1/B3 and BCRP and is a substrate of P‑gp. Although the likelihood of an 
+										<em>in vivo</em>
+										 inhibition is low when co-administered with leniolisib, an increase in systemic exposure of drugs that are substrates of these transporters cannot be excluded. Co-administration should be avoided. As leniolisib is marginally renally excreted (6%), the observed 
+										<em>in vitro</em>
+										 inhibition on renal uptake transporters is not considered clinically relevant.
+									</p>
+									<p>
+										<u>Gastric Acid Reducing Agents</u>
+									</p>
+									<p>Leniolisib exhibits pH-dependent solubility, with lower solubility at higher pH-values. Avoid co-administration of Joenja with locally acting antacids. Antacids should be taken either 2 hours before or 2 hours after Joenja administration.</p>
+									<p>
+										<u>Hormonal contraceptives</u>
+									</p>
+									<p>Administration of leniolisib with a single dose oral contraceptive containing ethinylestradiol and levonorgestrel increased ethinylestradiol exposure by approximately 30% with no effect on levonorgestrel exposure. The increase in ethinylestradiol exposure is unlikely to reduce the effectiveness of a combined oral contraceptive composed of ethinylestradiol and levonorgestrel.</p>
+									<p>
+										<u>Vaccines</u>
+									</p>
+									<p>No vaccine interaction studies have been performed using Joenja. Vaccinations may be less effective if administered during Joenja treatment.</p>
+									<p>
+										<u>Paediatric population</u>
+									</p>
+									<p>Interaction studies have only been performed in adults.</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="4.6 Fertility, pregnancy and lactation"/>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>4.6 Fertility, pregnancy and lactation</h2>
+									<p>
+										<a id="_Hlk100920025"/>
+										<u>Women of childbearing potential/Contraception</u>
+									</p>
+									<p>Based on findings in animals, women of childbearing potential must use highly effective methods of contraception during treatment with Joenja and for 1 week after the last dose (see section 5.3).</p>
+									<p>
+										<u>Pregnancy</u>
+									</p>
+									<p>
+										There are no data from the use of leniolisib in pregnant women. Embryonic and foetal development toxicity studies showed teratogenic effects of leniolisib in rats and rabbits 
+										<a id="_Hlk100920015"/>
+										(see section 5.3). Joenja should be discontinued during pregnancy or in women of childbearing potential not using highly effective methods of contraception.
+									</p>
+									<p>
+										<a id="_Hlk100920302"/>
+										<u>Breast‑feeding</u>
+									</p>
+									<p>
+										It is unknown whether leniolisib and its metabolites are excreted in human milk. A risk to 
+										<a id="_Hlk100920293"/>
+										newborn infants/infants and toddlers cannot be excluded. Breast‑feeding should be discontinued during treatment with Joenja.
+									</p>
+									<p>
+										<u>Fertility</u>
+									</p>
+									<p>No human data on the effect of leniolisib on fertility are available. In rats, slight effects on the male reproductive organs were observed and were partially to fully reversible within a 4-week recovery period. These effects did not reduce fertility indices or pregnancy rates (see section 5.3).</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="4.7 Effects on ability to drive and use machines"/>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>4.7 Effects on ability to drive and use machines</h2>
+									<p>Joenja has no or negligible influence on the ability to drive and use machines.</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="4.8 Undesirable effects"/>
+						<code>
+							<coding>
+								<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+								<code value="100000155542"/>
+								<display value="Undesirable effects"/>
+							</coding>
+						</code>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>4.8 Undesirable effects</h2>
+									<p>
+										<u>Summary of safety profile</u>
+									</p>
+									<p>
+										Safety data for leniolisib in APDS patients were obtained from two studies, Study 2201, a 2-part study and Study 2201E1. Study 2201 Part 1 (N=6) was an open‑label, within‑patient, up-titration, dose‑finding study evaluating leniolisib 10 mg, 30 mg, and 70 mg twice daily for 4 weeks per dose level to establish the safety and pharmacokinetics of leniolisib, as well as to select the optimal dose for use in Part 2. No patients from Part 1 were enrolled in Part 2
+										<a id="_Hlk113036153"/>
+										. Part 2 was a 12‑week randomized, blinded, placebo‑controlled study of leniolisib 70 mg twice daily in 31 patients. Twenty‑one patients were treated with leniolisib, and 10 received placebo. Additional safety data was obtained from Study 2201E1, a long-term open-label extension study in 37 patients. A total of 38 unique APDS patients received leniolisib in these clinical trials.
+									</p>
+									<p>The most commonly reported adverse reactions during leniolisib treatment were weight increased, atopic dermatitis, fatigue, dyspepsia, vomiting, and headache.</p>
+									<p>No significant differences in the incidence of adverse reactions were observed for APDS patients by disease type, age, or gender.</p>
+									<p>No adverse drug reactions were reported in Study 2201 Part 1.</p>
+									<p>
+										<u>Tabulated list of adverse reactions</u>
+									</p>
+									<p>Table 1 lists the adverse drug reactions reported with leniolisib in Study 2201 Part 2 and Study 2201E1. Listed adverse reactions are divided into groups according to the MedDRA system organ class and frequency. Frequencies are defined as follows: very common (≥1/10), common (≥1/100 to &lt;1/10), uncommon (≥1/1,000 to &lt;1/100), rare (≥1/10,000 to &lt;1/1,000), and not known (cannot be estimated from the available data). Within each frequency grouping, adverse reactions are presented in order of decreasing seriousness.</p>
+									<p>
+										<strong>Table 1 Adverse drug reactions reported in clinical studies</strong>
+									</p>
+									<table>
+										<tr>
+											<td>
+												<p>
+													<strong>MedDRA System Organ Class</strong>
+												</p>
+											</td>
+											<td>
+												<p>
+													<strong>Frequency</strong>
+												</p>
+											</td>
+											<td>
+												<p>
+													<strong>Adverse reaction</strong>
+												</p>
+											</td>
+										</tr>
+										<tr>
+											<td>
+												<p>Investigations</p>
+											</td>
+											<td>
+												<p>Common</p>
+											</td>
+											<td>
+												<p>Weight increased</p>
+											</td>
+										</tr>
+										<tr>
+											<td>
+												<p>Gastrointestinal disorders</p>
+											</td>
+											<td>
+												<p>Common</p>
+											</td>
+											<td>
+												<p>Dyspepsia</p>
+												<p>Vomiting </p>
+											</td>
+										</tr>
+										<tr>
+											<td>
+												<p>General disorders and administration site conditions</p>
+											</td>
+											<td>
+												<p>Common</p>
+											</td>
+											<td>
+												<p>Fatigue</p>
+											</td>
+										</tr>
+										<tr>
+											<td>
+												<p>Nervous system disorders</p>
+											</td>
+											<td>
+												<p>Common</p>
+											</td>
+											<td>
+												<p>Headache</p>
+											</td>
+										</tr>
+										<tr>
+											<td>
+												<p>Skin and subcutaneous tissue disorders</p>
+											</td>
+											<td>
+												<p>Common</p>
+											</td>
+											<td>
+												<p>Atopic dermatitis</p>
+											</td>
+										</tr>
+									</table>
+									<p>
+										<u>Reporting of suspected adverse reactions</u>
+									</p>
+									<p>
+										Reporting suspected adverse reactions after authorisation of the medicinal product is important. It allows continued monitoring of the benefit/risk balance of the medicinal product. Healthcare professionals are asked to report any suspected adverse reactions via the national reporting system listed in 
+										<a href="http://www.ema.europa.eu/docs/en_GB/document_library/Template_or_form/2013/03/WC500139752.doc">
+											<u>Appendix V</u>
+										</a>
+										.
+									</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="4.9 Overdose"/>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>4.9 Overdose</h2>
+									<p>If overdose occurs, the patient must be monitored for evidence of toxicity (see section 4.8). Treatment of overdose with Joenja consists of general supportive measures including monitoring of vital signs as well as observation of the clinical status of the patient.</p>
+								</div>
+							</div>
+						</text>
+					</section>
+				</section>
+				<section>
+					<title value="5. PHARMACOLOGICAL PROPERTIES"/>
+					<code>
+						<coding>
+							<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+							<code value="100000155543"/>
+							<display value="Pharmacological properties"/>
+						</coding>
+					</code>
+					<text>
+						<status value="generated"/>
+						<div xmlns="http://www.w3.org/1999/xhtml">
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<h2>5. PHARMACOLOGICAL PROPERTIES</h2>
+								<p/>
+							</div>
+						</div>
+					</text>
+					<section>
+						<title value="5.1 Pharmacodynamic properties"/>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>5.1 Pharmacodynamic properties</h2>
+									<p>
+										<a id="_Hlk100921852"/>
+										Pharmacotherapeutic group: 
+										<a id="_Hlk100921914"/>
+										{group}, ATC code: {code} not yet assigned
+									</p>
+									<p>
+										<u>Mechanism of action and Pharmacodynamic effects</u>
+									</p>
+									<p>
+										Leniolisib is an orally bioavailable small-molecule inhibitor of p110δ that selectively inhibits the PI3Kδ enzyme. This disease-modifying mechanism of action inhibits the key signalling pathway that leads to increased production of PIP3, hyperactivity of the PI3K/ pathway, and subsequent deficiencies and dysregulation of B and T cells that give rise to the main clinical phenotypes of the activated phosphoinositide 3-kinase syndrome (APDS). Leniolisib has a 28-fold greater selectivity for PI3Kδ over PI3Kα, a 43-fold greater for PI3Kδ over PI3Kβ, and 257-fold greater selectivity for PI3Kδ over PI3Kγ. Leniolisib reduces phosphorylated AKT (pAKT) pathway overactivity in APDS-affected B and T cells, 
+										<em>ex vivo</em>
+										.
+									</p>
+									<p>
+										<u>Clinical efficacy and safety</u>
+									</p>
+									<p>Joenja was evaluated in a single study (Study 2201) in APDS patients with genetically activated PI3K. The study consisted of two parts. Part 1 (N=6) was an open‑label, within‑patient dose‑finding study designed to establish the safety and pharmacokinetics of leniolisib in the target APDS population, as well as to select the optimal dose to be tested in Part 2. Part 2 was a 12-week randomised, blinded, placebo-controlled study of leniolisib 70 mg twice daily in 31 patients to assess the efficacy and safety of leniolisib in the target APDS population. Eligible patients were able to continue in a long-term safety extension study (Study 2201E1).</p>
+									<p>Study 2201 recruited patients aged 12 to 75 years in Europe and North America. A total of 32 patients were screened and 31 were randomized 2:1 to receive either leniolisib 70 mg (N=21) or placebo (N=10) twice a day for 12 weeks.</p>
+									<p>In Study 2201 Part 2, the co-primary endpoints were the improvement in immune dysregulation, as measured by change from baseline in the log10‑transformed sum of product diameters (SPD) of index lesions, and the normalisation of immunophenotype as measured by the percentage of naïve B cells out of total B cells. The difference in adjusted mean change in log10-transformed SPD for leniolisib (N=18) compared to placebo (N=8) was -0.24 (CI95, -0.37, -0.11; p=0.0012). The difference in adjusted mean change in percent naïve B cells for leniolisib (N=8) compared to placebo (N=5) was 40.13 (CI95, 28.51, 51.75; p&lt;0.0001).</p>
+									<p>Improvement in both co‑primary efficacy measures was also statistically and clinically significant when adjusting for use of IgG at Baseline. Results are presented in Table 2 below:</p>
+									<table>
+										<thead>
+											<tr>
+												<th colspan="8">
+													<p>
+														<a id="_Ref86232620"/>
+														<a id="_Ref95982108"/>
+														<a id="_Toc87877118"/>
+														<a id="_Toc97116042"/>
+														<a id="_Toc98136890"/>
+														Table 2 Primary Analysis of Change from Baseline at Week 12 (Day 85), Pharmacodynamic Analysis Set
+													</p>
+												</th>
+											</tr>
+											<tr>
+												<th rowspan="2"/>
+												<th rowspan="2">
+													<p>
+														<strong>n</strong>
+													</p>
+												</th>
+												<th colspan="2" rowspan="2">
+													<p>
+														<strong>Adjusted Mean Change (SE)</strong>
+													</p>
+												</th>
+												<th colspan="4">
+													<p>
+														<strong>Comparison of Adjusted Means</strong>
+													</p>
+													<p>
+														<strong>Leniolisib vs Placebo</strong>
+													</p>
+												</th>
+											</tr>
+											<tr>
+												<th>
+													<p>
+														<strong>Diff</strong>
+													</p>
+												</th>
+												<th>
+													<p>
+														<strong>SE</strong>
+													</p>
+												</th>
+												<th>
+													<p>
+														<strong>(95% CI)</strong>
+													</p>
+												</th>
+												<th>
+													<p>
+														<strong>2-side p‑value</strong>
+													</p>
+												</th>
+											</tr>
+											<tr>
+												<th colspan="8">
+													<p>
+														<strong>
+															Log
+															<sub>10</sub>
+															‑transformed SPD of Index Lesions (excluding patients with 0 lesions at Baseline, or SPD=0 at Day 85)
+														</strong>
+													</p>
+												</th>
+											</tr>
+											<tr>
+												<th>
+													<p>Leniolisib 70 mg bid</p>
+												</th>
+												<th>
+													<p>18</p>
+												</th>
+												<th>
+													<p>-0.27</p>
+												</th>
+												<th>
+													<p>(0.04)</p>
+												</th>
+												<th rowspan="2">
+													<p>-0.25</p>
+												</th>
+												<th rowspan="2">
+													<p>0.06</p>
+												</th>
+												<th rowspan="2">
+													<p>(-0.38, -0.12)</p>
+												</th>
+												<th rowspan="2">
+													<p>0.0006</p>
+												</th>
+											</tr>
+										</thead>
+										<tbody>
+											<tr>
+												<td>
+													<p>Placebo</p>
+												</td>
+												<td>
+													<p>8</p>
+												</td>
+												<td>
+													<p>-0.02</p>
+												</td>
+												<td>
+													<p>(0.06)</p>
+												</td>
+											</tr>
+											<tr>
+												<td colspan="8">
+													<p>
+														<strong>Percentage of naïve B cells out of total B cells (patients with &lt;48% of naïve B cells at Baseline)</strong>
+													</p>
+												</td>
+											</tr>
+											<tr>
+												<td>
+													<p>Leniolisib 70 mg bid</p>
+												</td>
+												<td>
+													<p>8</p>
+												</td>
+												<td>
+													<p>37.39</p>
+												</td>
+												<td>
+													<p>(5.35)</p>
+												</td>
+												<td>
+													<p>37.30</p>
+												</td>
+												<td>
+													<p>5.74</p>
+												</td>
+												<td>
+													<p>(24.06, 50.54)</p>
+												</td>
+												<td>
+													<p>0.0002</p>
+												</td>
+											</tr>
+											<tr>
+												<td>
+													<p>Placebo</p>
+												</td>
+												<td>
+													<p>5</p>
+												</td>
+												<td>
+													<p>0.09</p>
+												</td>
+												<td>
+													<p>(6.66)</p>
+												</td>
+												<td/>
+												<td/>
+												<td/>
+												<td/>
+											</tr>
+											<tr>
+												<td colspan="8">
+													<p>
+														ANCOVA=analysis of covariance; bid=twice daily; CI=confidence interval; Diff=difference (leniolisib minus placebo); 
+														<a id="_Hlk97640651"/>
+														SE=standard error; SPD=sum of product diameters
+														<br/>
+														Note: ANCOVA model with treatment as a fixed effect and log
+														<sub>10</sub>
+														-transformed Baseline SPD as covariate. The use of glucocorticoids and IgG at Baseline were both included as categorical (yes/no) covariates. Baseline is defined as the arithmetic mean of the Baseline and Day 1 values when both are available, and if either Baseline or the Day 1 value is missing, the existing value is used.
+													</p>
+												</td>
+											</tr>
+										</tbody>
+									</table>
+									<p>Secondary endpoints supported the primary endpoints. Log10-transformed 3D volume of measurable non-index lesions had significantly greater reductions with leniolisib than with placebo (p=0.0033) although change in log10-transformed 3D volume of index lesions were similar (excluding patients with 0 lesions at baseline, or 100% reduction in 3D volume at day 85). A reduction in the volume and bi-dimensional size of the spleen was statistically greater with leniolisib than with placebo (p=0.0020 and p=0.0148, respectively).</p>
+									<p>Patient-reported outcomes were similar between leniolisib and placebo after 12 weeks of treatment. Mean improvement in patient-reported outcomes (quality of life as measured by Short Form 36 (SF‑36), APDS-related well-being as measured by Patient’s Global Assessment-Visual analogue scales (PtGA), and Work Productivity Activity Impairment plus Classroom Impairment Questionnaire (WPAI)) exceeded meaningful change thresholds by one year of therapy.</p>
+									<p>No increase in cytomegalovirus (CMV) or Epstein-Barr virus (EBV) viremia markers were observed during treatment.</p>
+									<p>
+										<em>Serum immunoglobulin M</em>
+									</p>
+									<p>Exploratory analysis of serum immunoglobulin M (IgM) demonstrated levels in individual patients decreasing between 24 to 54% by the end of the 12-week treatment period for a mean change of ‑33.52% in the leniolisib group vs 2.99% in the placebo group. A post hoc external comparison of IgM levels between Study 2201E1 and current practice (physician’s choice of treatment, in some cases including immunosuppressants such as sirolimus) in the European Society of Immunodeficiency Registry, balanced using inverse probability of treatment weighting, demonstrated a significantly greater (p=0.0012) reduction in IgM with leniolisib compared with current practice.</p>
+									<p>
+										<em>Durable efficacy</em>
+									</p>
+									<p>Thirty-five of the patients enrolled in Study 2201 Parts 1 and 2, and two additional patients not treated in Study 2201 but previously treated with a different PI3Kδ inhibitor, continued in Study 2201E1 and were evaluable for maintenance of response. Mean duration of leniolisib treatment was approximately 2 years, and 3 patients had more than 5 years of leniolisib exposure. There was a durable effect in continued reduction of lymphoproliferation and increases in naïve to total B cells and decrease and then levelling off of transitional B cells from Baseline to Week 36. Additionally, there were clinically meaningful reductions in infection rates (p=0.0040), accompanied by post hoc observation of reduction in immunoglobulin replacement therapy.</p>
+									<p>
+										<u>Paediatric population</u>
+									</p>
+									<p>For adolescents aged 12‑17 years, please see above. The European Medicines Agency has deferred the obligation to submit the results of studies with leniolisib in one or more subsets of the paediatric population in APDS (see section 4.2 for information on paediatric use).</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="5.2 Pharmacokinetic properties"/>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>5.2 Pharmacokinetic properties</h2>
+									<p>
+										The pharmacokinetics of leniolisib have been studied in healthy subjects and adult and adolescent patients with APDS. Dose proportionality analysis of systemic drug exposure (area under the curve (AUC) and maximum plasma concentration (C
+										<sub>max</sub>
+										)) indicates that the pharmacokinetics of leniolisib are linear with respect to both dose (20 to 140 mg twice a day dosing and single doses of 10 to 400 mg/day) and time. During twice daily dosing approximately 12 hours apart, leniolisib accumulates approximately 1.4‑fold in achieving steady state (range of 1.0 to 2.2), consistent with an effective half‑life (t
+										<sub>1/2</sub>
+										) of approximately 7 hours. Steady state drug concentrations can be expected to be reached after approximately 2‑3 days of Joenja treatment. The pharmacokinetics of leniolisib are similar between healthy participants and APDS patients.
+									</p>
+									<p>
+										<u>Absorption</u>
+									</p>
+									<p>
+										In a placebo‑controlled, ascending single and multiple dose study in healthy participants, leniolisib was rapidly absorbed in the fasted state, with median time to maximum concentration in the plasma (t
+										<sub>max</sub>
+										) at about 1 hour post dose. T
+										<sub>max</sub>
+										 appeared independent of dose and was not altered after multiple oral doses.
+									</p>
+									<p>
+										<em>Food effect</em>
+									</p>
+									<p>
+										Co‑administration of a single 70 mg dose of leniolisib with a high fat meal prolonged the rate of absorption (T
+										<sub>max</sub>
+										 approximately 4 hours) and decreased C
+										<sub>max</sub>
+										 on average by 41% but not the extent of absorption (AUC). The impact of the food effect on pAKT inhibition is expected to be minor and not leading to lower average or trough inhibition. Patients may therefore take Joenja irrespective of food.
+									</p>
+									<p>
+										<u>Distribution</u>
+									</p>
+									<p>
+										The systemic decay in leniolisib plasma concentration over time is bi‑exponential, indicating a distribution delay towards peripheral tissues. The apparent terminal elimination t
+										<sub>1/2 </sub>
+										is approximately 10 hours (estimate from steady‑state drug washout). The median oral volume of distribution during the terminal phase is 42 L (range of 24 L to 128 L), indicating that leniolisib has a moderate‑to‑low volume of distribution.
+									</p>
+									<p>
+										<u>Biotransformation</u>
+									</p>
+									<p>Leniolisib was 60% metabolized by the liver, with CYP3A4 as the most predominant enzyme involved (95.4%) in the primary oxidative metabolism of leniolisib, with minor contribution from other enzymes (3.5% CYP3A5, 0.7% CYP1A2 and 0.4% CYP2D6). The strong activity of recombinant CYP1A1 suggests a possible involvement of this enzyme in the biotransformation of leniolisib in extra‑hepatic tissues. Intestinal secretion by BCRP and extrahepatic CYP1A1 cannot be excluded as excretion routes.</p>
+									<p>
+										<u>Elimination</u>
+									</p>
+									<p>
+										The mass balance of an oral dose of 70 mg 
+										<sup>14</sup>
+										C‑leniolisib was 92.5% (standard deviation: 2.3%) 168 hours post dose (morning of Day 8).
+									</p>
+									<p>
+										<sup>14</sup>
+										C‑leniolisib was excreted predominately via faeces (67.0%), while excretion via urine was approximately 25.5%. Approximately 70% of the 
+										<sup>14</sup>
+										C‑leniolisib was recovered within 48 hours.
+									</p>
+									<p>
+										<a id="_Hlk101261221"/>
+										<em>Metabolic interaction</em>
+									</p>
+									<p>
+										<em>In vitro</em>
+										, leniolisib is a substrate and an inhibitor of the hepatic efflux transporter BCRP and a substrate of P‑gp. Leniolisib was identified 
+										<em>in vitro</em>
+										 as a weak potential inhibitor of the hepatic uptake and efflux transporters OATP1B1/B3 and BCRP.
+									</p>
+									<p>Leniolisib exposure was increased approximately 2‑fold when administered with itraconazole (strong CYP3A4 inhibitor) whereas quinidine (strong P‑gp and CYP2D6 inhibitor) had no effect. Leniolisib is not a sensitive substrate of P‑gp and CYP2D6.</p>
+									<p>
+										When combined with a monophasic oral contraceptive containing levonorgestrel and ethinylestradiol, leniolisib increased ethinylestradiol exposure by approximately 25 to 30% in terms of both AUC and C
+										<sub>max</sub>
+										 but did not affect the C
+										<sub>max</sub>
+										 or AUC of levonorgestrel (90% CI of geometric mean: 0.80 to 1.25). The efficacy of a combined oral contraceptive composed of ethinylestradiol and levonorgestrel is not expected to be compromised by concomitant use of leniolisib.
+									</p>
+									<p>
+										<a id="_Hlk100923727"/>
+										<u>Pharmacokinetic/pharmacodynamic relationship(s)</u>
+									</p>
+									<p>
+										A clear dose and concentration dependency in drug effect was seen over the leniolisib dose range explored. Although a single dose of leniolisib 10 mg generally reduced the ratio of pAKT positive (pAKT(S473)
+										<sup>+</sup>
+										 B cells after ex vivo stimulation) cells to less than 20%, the inhibition generally waned over the next 12 hours. A slightly more pronounced peak drug effect and more sustained inhibition were seen at higher doses. Although 30 and 70 mg did not greatly differ in their extent of maximum effect, inhibition was clearly more sustained over time at 70 mg, which may therefore be most optimal in terms of time‑average inhibition as well as inhibition at trough 
+										<a id="_Hlk100923776"/>
+										(12 hours post dose).
+									</p>
+									<p>
+										Scatterplots of the primary efficacy endpoints (Day 85) change in 
+										<a id="_Hlk100923945"/>
+										<a id="_Hlk101261767"/>
+										log
+										<sub>10</sub>
+										 SPD of index lesions and change in naïve B cells vs Day 1 AUC from the first dose until last assessment point (AUC
+										<sub>last</sub>
+										) showed a slight trend for larger change in index lesions with increasing AUC
+										<sub>last</sub>
+										 with no indication for correlation between change in naïve B cells and drug exposure.
+									</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="5.3 Preclinical safety data"/>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>5.3 Preclinical safety data</h2>
+									<p>
+										<u>Repeated dose toxicity</u>
+									</p>
+									<p>
+										The effects observed in the repeat dose toxicity studies were primarily in the haemolymphopoietic system related to the immunomodulatory properties of leniolisib and the gastrointestinal tract in mice, rats, and monkeys. Leniolisib caused depletion/decreased activity in lymphoid tissues and inhibited the T cell dependent antibody response (TDAR) in rats. As a result of immunosuppression, an increase in opportunistic skin infections (in rats) and gastrointestinal toxicity (i.e., inflammation/infections in mice and monkeys) were observed, leading to severe diarrhoea and emesis (monkeys only). At the NOAELs of rats and monkeys in the chronic toxicity studies, the combined male/female plasma exposure (AUC
+										<sub>0‑24h,u</sub>
+										) was similar to the human exposure at the therapeutic dose.
+									</p>
+									<p>
+										<u>Genotoxicity and carcinogenicity</u>
+									</p>
+									<p>
+										Leniolisib did not show mutagenic, clastogenic, or aneugenic potential in the genotoxicity studies, i.e., the 
+										<em>in vitro</em>
+										 microbial reverse mutation (Ames) assay, the 
+										<em>in vitro</em>
+										 micronucleus assay in TK6 cells, chromosomal aberration assay in human peripheral blood lymphocytes, or 
+										<em>in vivo</em>
+										 micronucleus study in rats. No signs of carcinogenic potential (e.g., hyperplasia/neoplasia) were found in chronic nonclinical studies. Long‑term animal studies to evaluate the carcinogenic potential of leniolisib have not been conducted.
+									</p>
+									<p>
+										<a id="_Hlk100924675"/>
+										<u>Reproductive and developmental toxicity</u>
+									</p>
+									<p>Slight effects on the male reproductive organs (prostate, testes, and epididymis) were observed in rats. In the 26-week repeat dose rat study, lower prostate weights correlated with a decreased secretion seen microscopically. In this study and the 10‑week juvenile rat study, lower testes and epididymis weights and lower sperm counts were linked to decreases in the germinal epithelium and round spermatids and loss of spermatocytes. The minimal histological findings occurred only in occasional males at 90 and 120 mg/kg/day with no effects on mating, fertility indices, or pregnancy rates. In the 26-week study, these effects were observed in the high dose group (90 mg/kg/day) with similar incidence and severity with no progression by increasing the treatment duration. The described histological changes were limited to studies in rats and were not observed in studies in monkeys with up to 39 weeks of exposure. Therefore, reduced male fertility is not expected to be clinically relevant.</p>
+									<p>
+										Embryonic and foetal development studies in rats and rabbits showed microphthalmia (rats and rabbits) as well as reduced orbital socket size and anophthalmia (rats only) at the highest dose levels (120 and 100 mg/kg/day, respectively). In rats, the maternal exposure at the NOAEL of 30 mg/kg/day was 2.6 times the human exposure based on steady state AUC
+										<sub>0‑24h unbound</sub>
+										 at the recommended dose of 70 mg twice a day (see section 4.6).
+									</p>
+								</div>
+							</div>
+						</text>
+					</section>
+				</section>
+				<section>
+					<title value="6. PHARMACEUTICAL PARTICULARS"/>
+					<code>
+						<coding>
+							<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+							<code value="100000155544"/>
+							<display value="Pharmaceutical particulars"/>
+						</coding>
+					</code>
+					<text>
+						<status value="generated"/>
+						<div xmlns="http://www.w3.org/1999/xhtml">
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<h2>6. PHARMACEUTICAL PARTICULARS</h2>
+								<p/>
+							</div>
+						</div>
+					</text>
+					<section>
+						<title value="6.1 List of excipients"/>
+						<code>
+							<coding>
+								<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+								<code value="100000155545"/>
+								<display value="List of excipients"/>
+							</coding>
+						</code>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>6.1 List of excipients</h2>
+									<p>
+										<u>Tablet core:</u>
+									</p>
+									<p>Lactose monohydrate</p>
+									<p>Microcrystalline cellulose</p>
+									<p>Hydroxypropyl methylcellulose</p>
+									<p>Sodium starch glycolate (Type A)</p>
+									<p>Magnesium stearate</p>
+									<p>Colloidal silicon dioxide</p>
+									<p>
+										<u>Tablet film-coating:</u>
+									</p>
+									<p>Hydroxypropyl methylcellulose</p>
+									<p>Titanium dioxide</p>
+									<p>Iron oxide yellow</p>
+									<p>Iron oxide red</p>
+									<p>Talc</p>
+									<p>Polyethylene glycol</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="6.2 Incompatibilities"/>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>6.2 Incompatibilities</h2>
+									<p>Not applicable.</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="6.3 Shelf life"/>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>6.3 Shelf life</h2>
+									<p>24 months</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="6.4 Special precautions for storage"/>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>6.4 Special precautions for storage</h2>
+									<p>Do not store above 25°C. Do not refrigerate.</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="6.5 Nature and contents of container"/>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>6.5 Nature and contents of container</h2>
+									<p>High density polyethylene bottles with aluminium induction seal and child resistant polypropylene screw cap.</p>
+									<p>Each pack contains 1 bottle with 60 tablets.</p>
+								</div>
+							</div>
+						</text>
+					</section>
+					<section>
+						<title value="6.6 Special precautions for disposal"/>
+						<text>
+							<status value="generated"/>
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<div xmlns="http://www.w3.org/1999/xhtml">
+									<h2>6.6 Special precautions for disposal</h2>
+									<p>No special requirements.</p>
+									<p>Any unused medicinal product or waste material should be disposed of in accordance with local requirements.</p>
+								</div>
+							</div>
+						</text>
+					</section>
+				</section>
+				<section>
+					<title value="7. MARKETING AUTHORISATION HOLDER"/>
+					<code>
+						<coding>
+							<system value="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538"/>
+							<code value="100000155551"/>
+							<display value="Marketing authorisation holder"/>
+						</coding>
+					</code>
+					<text>
+						<status value="generated"/>
+						<div xmlns="http://www.w3.org/1999/xhtml">
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<h2>7. MARKETING AUTHORISATION HOLDER</h2>
+								<p>Pharming Technologies B.V.</p>
+								<p>Darwinweg 24</p>
+								<p>2333 CR Leiden</p>
+								<p>The Netherlands</p>
+							</div>
+						</div>
+					</text>
+				</section>
+				<section>
+					<title value="8. MARKETING AUTHORISATION NUMBER(S)"/>
+					<text>
+						<status value="generated"/>
+						<div xmlns="http://www.w3.org/1999/xhtml">
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<h2>8. MARKETING AUTHORISATION NUMBER(S)</h2>
+								<p/>
+							</div>
+						</div>
+					</text>
+				</section>
+				<section>
+					<title value="9. DATE OF FIRST AUTHORISATION/RENEWAL OF THE AUTHORISATION"/>
+					<text>
+						<status value="generated"/>
+						<div xmlns="http://www.w3.org/1999/xhtml">
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<h2>9. DATE OF FIRST AUTHORISATION/RENEWAL OF THE AUTHORISATION</h2>
+								<p>Date of first authorisation: {DD month YYYY}</p>
+							</div>
+						</div>
+					</text>
+				</section>
+				<section>
+					<title value="10. DATE OF REVISION OF THE TEXT"/>
+					<text>
+						<status value="generated"/>
+						<div xmlns="http://www.w3.org/1999/xhtml">
+							<div xmlns="http://www.w3.org/1999/xhtml">
+								<h2>10. DATE OF REVISION OF THE TEXT</h2>
+								<p>
+									<a id="_Hlk100924551"/>
+									Detailed information on this medicinal product is available on the website of the European Medicines Agency 
+									<a href="http://www.ema.europa.eu">
+										<u>http://www.ema.europa.eu</u>
+									</a>
+									.
+								</p>
+							</div>
+						</div>
+					</text>
+				</section>
+			</Composition>
+		</resource>
+	</entry>
+</Bundle>

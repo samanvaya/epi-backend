@@ -440,42 +440,96 @@ def bundle_to_xml(bundle: Bundle) -> str:
 def bundle_to_json(bundle: Bundle) -> str:
     return resource_to_json(bundle)
 
-def _json_to_xml(data: Union[Dict, List], root_tag: str) -> str:
-    from xml.dom.minidom import parseString
-    
-    def dict_to_xml(d, tag):
-        xml_s = f"<{tag}"
-        if tag == root_tag: xml_s += ' xmlns="http://hl7.org/fhir"'
-        xml_s += ">"
+def _xml_attr(v) -> str:
+    """Escape a value for use inside an XML attribute."""
+    return (
+        str(v)
+        .replace("&", "&amp;")
+        .replace('"', "&quot;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
 
-        inner_tag = d.get("resourceType") if isinstance(d, dict) else None
-        if inner_tag and tag != root_tag:
-            xml_s += f"<{inner_tag}>"
-        
-        for k, v in d.items():
-            if k == "resourceType": continue
+
+def _json_to_xml(data: Union[Dict, List], root_tag: str) -> str:
+    """Convert a FHIR JSON dict to valid FHIR R4 XML.
+
+    Key FHIR R4 XML rules applied here (see hl7.org/fhir/R4/xml.html):
+      1. Root element carries xmlns="http://hl7.org/fhir".
+      2. Primitive values serialise as  <tag value="..."/>.
+      3. extension / modifierExtension: the 'url' property MUST be rendered
+         as an XML *attribute*, not a child element.
+      4. Bundle.entry[].resource children must be wrapped in a tag whose
+         name equals the resourceType (e.g. <Composition>...</Composition>).
+      5. meta.profile items are plain strings (primitives) →
+         <profile value="..."/>.
+      6. The XHTML 'div' content is injected verbatim (already has xmlns).
+    """
+    from xml.dom.minidom import parseString
+
+    # Tags whose 'url' field is an XML attribute, not a child element.
+    EXTENSION_TAGS = {"extension", "modifierExtension"}
+
+    def serialize(tag: str, value, is_root: bool = False) -> str:
+        """Recursively serialise one FHIR element."""
+
+        # ── Primitive scalar ────────────────────────────────────────────────
+        if not isinstance(value, (dict, list)):
+            return f'<{tag} value="{_xml_attr(value)}"/>'
+
+        # ── Repeating element (list) ─────────────────────────────────────────
+        if isinstance(value, list):
+            return "".join(serialize(tag, item) for item in value)
+
+        # ── Object (dict) ────────────────────────────────────────────────────
+        # Build the opening tag with any required XML attributes
+        attrs = ""
+        if is_root:
+            attrs += ' xmlns="http://hl7.org/fhir"'
+
+        # extension / modifierExtension: promote 'url' to an XML attribute
+        if tag in EXTENSION_TAGS and "url" in value:
+            attrs += f' url="{_xml_attr(value["url"])}"'
+
+        xml_s = f"<{tag}{attrs}>"
+
+        # If this object declares a resourceType and we are NOT at the root,
+        # wrap the content in a typed element (needed for Bundle.entry.resource)
+        resource_type = value.get("resourceType") if not is_root else None
+        if resource_type:
+            xml_s += f"<{resource_type}>"
+
+        for k, v in value.items():
+            if k == "resourceType":
+                continue  # already handled
+
+            # Skip 'url' if it was promoted to an XML attribute above
+            if k == "url" and tag in EXTENSION_TAGS:
+                continue
+
+            if k == "div":
+                # XHTML narrative — inject verbatim, no escaping
+                xml_s += str(v)
+                continue
+
             if isinstance(v, list):
                 for item in v:
-                    item_tag = k 
-                    if isinstance(item, dict):
-                        xml_s += dict_to_xml(item, item_tag)
-                    else:
-                        xml_s += f"<{item_tag} value=\"{str(item)}\"/>"
+                    xml_s += serialize(k, item)
             elif isinstance(v, dict):
-                xml_s += dict_to_xml(v, k)
-            elif k == "div": 
-                 xml_s += f"{v}" # Rule 4: Already formatted with xmlns
+                xml_s += serialize(k, v)
             else:
-                xml_s += f'<{k} value="{str(v)}"/>'
-        
-        if inner_tag and tag != root_tag:
-            xml_s += f"</{inner_tag}>"
+                xml_s += f'<{k} value="{_xml_attr(v)}"/>'
+
+        if resource_type:
+            xml_s += f"</{resource_type}>"
 
         xml_s += f"</{tag}>"
         return xml_s
-        
-    xml_str = dict_to_xml(data, root_tag)
+
+    xml_str = serialize(root_tag, data, is_root=True)
     try:
-        return parseString(xml_str).toprettyxml()
-    except:
+        return parseString(xml_str).toprettyxml(indent="\t")
+    except Exception:
+        # Return raw string if pretty-printing fails (e.g. malformed XHTML
+        # embedded in a narrative div).
         return xml_str
