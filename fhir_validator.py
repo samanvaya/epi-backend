@@ -71,24 +71,29 @@ class FHIRValidator:
     # Fallback: HAPI FHIR public server
     HAPI_URL = "https://hapi.fhir.org/baseR4/Bundle/$validate"
 
-    # Profile-not-found messages that are validator *configuration* issues,
-    # not real XML structural errors. We downgrade these to Warnings so the
-    # pipeline is not blocked by missing remote IGs.
+    # Profile-not-found and Terminology messages that are validator *configuration* 
+    # issues, not real XML structural errors. We downgrade these to Warnings so the
+    # pipeline is not blocked by missing remote IGs or missing CodeSystems.
     _PROFILE_NOT_FOUND_PATTERNS = [
         "could not be found",
         "not fetched",
         "unknown profile",
         "not able to check",
         "failed to retrieve",
+        "codesystem is unknown",
+        "unknown codesystem",
+        "cannot be validated",
+        "none of the codes provided are in the value set",
+        "not found in the terminology server"
     ]
 
     def _downgrade_profile_issues(self, issues: List["ValidationIssue"]) -> List["ValidationIssue"]:
-        """Downgrade Profile-reference errors (validator config issues) to Warnings."""
+        """Downgrade Profile/Terminology reference errors (validator config issues) to Warnings."""
         result = []
         for issue in issues:
             msg_lower = issue.message.lower()
-            is_profile_issue = any(p in msg_lower for p in self._PROFILE_NOT_FOUND_PATTERNS)
-            if is_profile_issue and issue.severity in ("Error", "Fatal"):
+            is_config_issue = any(p in msg_lower for p in self._PROFILE_NOT_FOUND_PATTERNS)
+            if is_config_issue and issue.severity in ("Error", "Fatal"):
                 issue.severity = "Warning"
             result.append(issue)
         return result

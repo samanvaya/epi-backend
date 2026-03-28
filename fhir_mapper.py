@@ -316,6 +316,14 @@ def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str) -
         )
     ]
 
+    comp_div = (
+        f'<div xmlns="http://www.w3.org/1999/xhtml">'
+        f'<p><b>Product Name:</b> {html.escape(filename)}</p>'
+        f'<p><b>Document Type:</b> {html.escape(doc_type)}</p>'
+        f'<p>This is a generated electronic Product Information (ePI) Composition.</p>'
+        f'</div>'
+    )
+
     return Composition(
         id=comp_id,
         meta=Meta(profile=profiles),
@@ -329,6 +337,7 @@ def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str) -
         date=datetime.datetime.now(datetime.timezone.utc),
         author=[Reference(reference=f"urn:uuid:{org_id}")],
         title=f"{doc_type} - {filename}",
+        text=create_narrative(comp_div),
         section=fhir_sections
     )
 
