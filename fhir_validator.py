@@ -72,8 +72,8 @@ class FHIRValidator:
     HAPI_URL = "https://hapi.fhir.org/baseR4/Bundle/$validate"
 
     # Profile-not-found and Terminology messages that are validator *configuration* 
-    # issues, not real XML structural errors. We downgrade these to Warnings so the
-    # pipeline is not blocked by missing remote IGs or missing CodeSystems.
+    # issues, not real XML structural errors. We filter these out so the
+    # pipeline is not blocked or cluttered by missing remote IGs or missing CodeSystems.
     _PROFILE_NOT_FOUND_PATTERNS = [
         "could not be found",
         "not fetched",
@@ -87,15 +87,14 @@ class FHIRValidator:
         "not found in the terminology server"
     ]
 
-    def _downgrade_profile_issues(self, issues: List["ValidationIssue"]) -> List["ValidationIssue"]:
-        """Downgrade Profile/Terminology reference errors (validator config issues) to Warnings."""
+    def _filter_config_issues(self, issues: List["ValidationIssue"]) -> List["ValidationIssue"]:
+        """Remove Profile/Terminology reference errors (validator config issues) from the log."""
         result = []
         for issue in issues:
             msg_lower = issue.message.lower()
             is_config_issue = any(p in msg_lower for p in self._PROFILE_NOT_FOUND_PATTERNS)
-            if is_config_issue and issue.severity in ("Error", "Fatal"):
-                issue.severity = "Warning"
-            result.append(issue)
+            if not is_config_issue:
+                result.append(issue)
         return result
 
     def validate_string(self, xml_string: str, fhir_version: str = "4.0.1") -> List["ValidationIssue"]:
@@ -118,7 +117,7 @@ class FHIRValidator:
                 )
             if response.status_code == 200:
                 issues = self._parse_json_outcome(response.json())
-                return self._downgrade_profile_issues(issues)
+                return self._filter_config_issues(issues)
             # 415 or other — fall through to HAPI
         except Exception:
             pass
@@ -133,7 +132,7 @@ class FHIRValidator:
                 )
             if response.status_code in (200, 400, 422):
                 issues = self._parse_xml_outcome(response.text)
-                return self._downgrade_profile_issues(issues)
+                return self._filter_config_issues(issues)
             return [ValidationIssue("Fatal", "", f"HAPI FHIR API error: HTTP {response.status_code}")]
         except Exception as e:
             return [ValidationIssue("Fatal", "", f"Both validator APIs failed: {str(e)}")]
