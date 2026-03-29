@@ -32,6 +32,6 @@ jobs:
           context: .
           file: Dockerfile_HF
           push: true
-          tags: registry.hf.space/syoga8805/antigravity-deploy:latest
+          tags: registry.hf.space/syoga8805-antigravity-deploy:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
