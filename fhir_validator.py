@@ -109,20 +109,22 @@ class FHIRValidator:
         jar_path = os.path.join(self.project_dir, "validator_cli.jar")
 
         # 1. Primary: Local Java CLI Validator (Handles Context and IG natively)
+        # Falls through to HTTP fallbacks if CLI fails or produces empty output.
         if os.path.exists(jar_path):
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".xml", mode="w", encoding="utf-8") as tmp_xml:
-                tmp_xml.write(xml_string)
-                xml_path = tmp_xml.name
-            
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode="w") as tmp_json:
-                json_path = tmp_json.name
-
+            xml_path = None
+            json_path = None
             try:
-                # Execution command with memory constraints to prevent Render container OOM crashes
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".xml", mode="w", encoding="utf-8") as tmp_xml:
+                    tmp_xml.write(xml_string)
+                    xml_path = tmp_xml.name
+
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode="w") as tmp_json:
+                    json_path = tmp_json.name
+
                 cmd = [
-                    "java", 
+                    "java",
                     "-Xmx1g",
-                    "-XX:+UseSerialGC", 
+                    "-XX:+UseSerialGC",
                     "-jar", jar_path,
                     xml_path,
                     "-version", fhir_version,
@@ -130,22 +132,33 @@ class FHIRValidator:
                     "-output", json_path
                 ]
                 proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-                
-                # We ignore exit code since validator returns non-zero if there are validation errors.
-                # Just read the json output.
+
+                # Read output only if the file has content
                 if os.path.exists(json_path):
-                    with open(json_path, "r", encoding="utf-8") as f:
-                        out_data = json.load(f)
-                    issues = self._parse_json_outcome(out_data)
-                    # Do not filter errors because the CLI natively knows these CodeSystems
-                    return issues
-                else:
-                    return [ValidationIssue("Fatal", "", f"CLI Validator failed internally: {proc.stderr}")]
-            except Exception as e:
-                return [ValidationIssue("Fatal", "", f"CLI Integration error: {str(e)}")]
+                    content = open(json_path, "r", encoding="utf-8").read().strip()
+                    if content:
+                        out_data = json.loads(content)
+                        issues = self._parse_json_outcome(out_data)
+                        # CLI natively knows CodeSystems - no filtering needed
+                        return issues
+                    else:
+                        # Empty output file: validator ran but wrote nothing.
+                        # Log stderr for diagnosis and fall through to HTTP APIs.
+                        import logging
+                        logging.getLogger(__name__).warning(
+                            f"CLI validator produced empty output. stderr: {proc.stderr[:500]}"
+                        )
+                        # Fall through to HTTP fallbacks below
+            except subprocess.TimeoutExpired:
+                # Timed out — fall through to HTTP fallbacks
+                import logging
+                logging.getLogger(__name__).warning("CLI validator timed out, falling back to HTTP APIs")
+            except Exception:
+                # Any other CLI error — fall through to HTTP fallbacks
+                pass
             finally:
-                if os.path.exists(xml_path): os.remove(xml_path)
-                if os.path.exists(json_path): os.remove(json_path)
+                if xml_path and os.path.exists(xml_path): os.remove(xml_path)
+                if json_path and os.path.exists(json_path): os.remove(json_path)
 
         # 2. Fallback: Try validator.fhir.org via raw HTTP if Java logic failed/absent
         igs = f"hl7.fhir.r4.core#{fhir_version}&ig={ig_pkg}"

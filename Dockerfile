@@ -19,7 +19,7 @@ RUN wget -q -O validator_cli.jar https://github.com/hapifhir/org.hl7.fhir.core/r
 # This command runs a dummy validation to force the package resolver to pull hl7.eu.fhir.epil
 RUN touch dummy.xml && \
     echo "<Composition xmlns='http://hl7.org/fhir'><id value='1'/></Composition>" > dummy.xml && \
-    java -Xmx300m -jar validator_cli.jar dummy.xml -version 4.0.1 -ig hl7.eu.fhir.epil || true && \
+    java -Xmx1g -XX:+UseSerialGC -jar validator_cli.jar dummy.xml -version 4.0.1 -ig hl7.eu.fhir.epil || true && \
     rm dummy.xml
 
 COPY main.py .
