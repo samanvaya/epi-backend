@@ -116,10 +116,12 @@ def process_stateless(file: UploadFile = File(...)):
             # 4. Diff comparison: source text vs validated XML
             source_text = " ".join(f"{s['title']} {s['text']}" for s in sections)
             try:
-                s_clean = diff_engine.clean_for_diff(source_text, preserve_formatting=True)
-                t_clean = diff_engine.clean_for_diff(fixed_xml, preserve_formatting=True)
+                # Strip all XML/HTML tags for fidelity score — compare plain text only
+                s_clean = diff_engine.clean_for_diff(source_text, preserve_formatting=False)
+                t_clean = diff_engine.clean_for_diff(fixed_xml, preserve_formatting=False)
                 matcher = difflib.SequenceMatcher(None, s_clean.split(), t_clean.split())
                 fidelity_score = round(matcher.ratio() * 100, 1)
+                # Visual diff still uses formatting for a WYSIWYG view
                 diff_html = diff_engine.generate_html_diff(source_text, fixed_xml)
             except Exception:
                 fidelity_score = 0.0

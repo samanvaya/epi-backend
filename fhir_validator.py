@@ -309,6 +309,9 @@ class AutoFixer:
 
         fixed, actions = self._fix_duplicate_xmlns(fixed, issues)
         fixes.extend(actions)
+        
+        fixed, actions = self._fix_invalid_table_attributes(fixed, issues)
+        fixes.extend(actions)
 
         return fixed, fixes
 
@@ -477,6 +480,37 @@ class AutoFixer:
                         xml = fixed_xml
                 break
         return xml, fixes
+
+    def _fix_invalid_table_attributes(self, xml: str, issues: List[ValidationIssue]) -> Tuple[str, List[FixAction]]:
+        """Remove presentation attributes from tables that violate FHIR XHTML rules."""
+        fixes = []
+        # FHIR strict XHTML restricts attributes on table, td, th, tr
+        # Common invalid ones from Word/PDF converters: border, width, cellspacing, cellpadding, valign
+        invalid_attrs = ['border', 'width', 'cellspacing', 'cellpadding', 'valign']
+        
+        has_table_issues = any('attribute' in i.message.lower() and 'not allowed' in i.message.lower() for i in issues)
+        if not has_table_issues:
+            # Only run if validator complained
+            return xml, fixes
+            
+        new_xml = xml
+        count = 0
+        for attr in invalid_attrs:
+            # Regex to find these attributes and strip them. e.g. border="1"
+            pattern = re.compile(rf'\s+{attr}=["\'][^"\']*["\']', re.IGNORECASE)
+            matches = len(pattern.findall(new_xml))
+            if matches > 0:
+                new_xml = pattern.sub('', new_xml)
+                count += matches
+                
+        if count > 0:
+            fixes.append(FixAction(
+                rule="XHTML_INVALID_TABLE_ATTR",
+                location="table elements",
+                description=f"Removed {count} invalid styling attributes from tables/cells"
+            ))
+            
+        return new_xml, fixes
 
 
 # --- Validation Log ---

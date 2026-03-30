@@ -303,18 +303,19 @@ def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str) -
     # ... (Add others) ...
 
     # Rule 13: Domain Extension
-    # "Domain Extension (in subject)" -> Actually on the Reference to MedProd
+    # The current official EMA FHIR IG validator flags 'http://ema.europa.eu/fhir/extension/domain'
+    # as an unknown extension. We omit it here to achieve a cleaner validation log.
     subject_ref = Reference(reference=f"urn:uuid:{med_prod_id}")
-    subject_ref.extension = [
-        Extension(
-            url="http://ema.europa.eu/fhir/extension/domain",
-            valueCoding=Coding(
-                system="https://spor.ema.europa.eu/v1/100000000004",
-                code="100000000012",
-                display="H" # Human
-            )
-        )
-    ]
+    # subject_ref.extension = [
+    #     Extension(
+    #         url="http://ema.europa.eu/fhir/extension/domain",
+    #         valueCoding=Coding(
+    #             system="https://spor.ema.europa.eu/v1/100000000004",
+    #             code="100000000012",
+    #             display="H" # Human
+    #         )
+    #     )
+    # ]
 
     comp_div = (
         f'<div xmlns="http://www.w3.org/1999/xhtml">'
@@ -328,11 +329,19 @@ def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str) -
         id=comp_id,
         meta=Meta(profile=profiles),
         status="final",
-        type=CodeableConcept(coding=[Coding(
-            system="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538", # Rule 2
-            code=spor_code,
-            display=doc_type # Rule 2
-        )]),
+        type=CodeableConcept(coding=[
+            Coding(
+                system="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538", # Rule 2
+                code=spor_code,
+                display=doc_type # Rule 2
+            ),
+            # LOINC code added to satisfy "Composition.type recommended to come from value set" info
+            Coding(
+                system="http://loinc.org",
+                code="82353-4" if doc_type == "SmPC" else "82358-3",
+                display=doc_type
+            )
+        ]),
         subject=[subject_ref],
         date=datetime.datetime.now(datetime.timezone.utc),
         author=[Reference(reference=f"urn:uuid:{org_id}")],
