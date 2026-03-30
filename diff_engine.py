@@ -54,9 +54,9 @@ def clean_for_diff(text: str, preserve_formatting: bool = True) -> str:
             tag_name = match.group(1)
             is_close = tag_full.startswith("</")
             
-            # whitelist: p, br, b, i, u, table elements, lists.
-            # EXCLUDED: h1-h2 (Section Titles). INCLUDED: h3-h6 (Content Headers).
-            allowed = ["p", "br", "b", "strong", "i", "em", "u", "table", "tbody", "thead", "tr", "td", "th", "ul", "ol", "li", "h3", "h4", "h5", "h6", "a"]
+            # whitelist: p, br, b, strong, i, em, u, table elements, lists, and headers
+            # INCLUDED: h1-h6 so that all structural headings are strictly compared for fidelity
+            allowed = ["p", "br", "b", "strong", "i", "em", "u", "table", "tbody", "thead", "tr", "td", "th", "ul", "ol", "li", "h1", "h2", "h3", "h4", "h5", "h6", "a"]
             
             if tag_name in allowed:
                 return tag_full # Keep it

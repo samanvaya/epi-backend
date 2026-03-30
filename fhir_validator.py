@@ -439,6 +439,11 @@ class AutoFixer:
                 elem_match = re.search(r"'(\w+)'", issue.message)
                 if elem_match:
                     bad_elem = elem_match.group(1)
+                    
+                    # DO NOT destructively remove table structures! This destroys data formatting completely.
+                    if bad_elem.lower() in ['table', 'tr', 'td', 'th', 'tbody', 'thead']:
+                        continue
+                        
                     # Remove the element but keep its content
                     open_pat = re.compile(rf'<{bad_elem}(?:\s[^>]*)?>',  re.IGNORECASE)
                     close_pat = re.compile(rf'</{bad_elem}\s*>', re.IGNORECASE)
