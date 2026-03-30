@@ -114,12 +114,15 @@ def process_stateless(file: UploadFile = File(...)):
             validation_report_md = val_log.to_markdown()
 
             # 4. Diff comparison: source text vs validated XML
+            import re
             source_parts = []
             for s in sections:
                 title = s.get('title', '').strip()
                 text = s.get('text', '').strip()
-                # Avoid duplicating the title in source_text if the text already starts with it
-                if title and text.lower().startswith(title.lower()):
+                # Strip leading tags to check if the text mathematically starts with the title
+                text_no_tags_start = re.sub(r'^\s*(<[^>]+>)+\s*', '', text)
+                
+                if title and (text.lower().startswith(title.lower()) or text_no_tags_start.lower().startswith(title.lower())):
                     source_parts.append(text)
                 else:
                     source_parts.append(f"{title} {text}")
@@ -131,9 +134,10 @@ def process_stateless(file: UploadFile = File(...)):
                 cleaned_xml = re.sub(r'Product Name:.*?(electronic Product Information \(ePI\) Composition\.)', '', fixed_xml, flags=re.DOTALL)
                 cleaned_xml = re.sub(r'<h2>Section \d\.?</h2>\s*<p>Section \d\.?</p>', '', cleaned_xml, flags=re.IGNORECASE)
 
-                # Include structure/headings in fidelity score per user request
-                s_clean = diff_engine.clean_for_diff(source_text, preserve_formatting=True)
-                t_clean = diff_engine.clean_for_diff(cleaned_xml, preserve_formatting=True)
+                # Strip all XML/HTML tags for fidelity score — compare plain text only
+                # We revert this back to False to prevent raw FHIR XML tags from appearing as 'massive changes' in the diff tool
+                s_clean = diff_engine.clean_for_diff(source_text, preserve_formatting=False)
+                t_clean = diff_engine.clean_for_diff(cleaned_xml, preserve_formatting=False)
                 matcher = difflib.SequenceMatcher(None, s_clean.split(), t_clean.split())
                 fidelity_score = round(matcher.ratio() * 100, 1)
                 

@@ -111,20 +111,18 @@ def create_section(data: Dict[str, str]) -> CompositionSection:
         # Already HTML-safe.
         clean_text = text_content
         
-        # STRUCTURE FIDELITY FIX:
-        # Instead of stripping the title out and unconditionally injecting <h2>,
-        # we check if the text already starts with the title (e.g., inside <h4> or <p>).
-        # By preserving the original structure, the fidelity score stays high.
+        # DUPLICATE HEADER FIX:
+        # Strip the title from the body if it repeats at the very start to avoid double 
+        # headings, and standardize everything securely under an H2 tag.
         if clean_title:
              safe_t = re.escape(clean_title)
-             ptrn = r'^\s*(<[^>]+>)*\s*' + safe_t
-             if not re.search(ptrn, clean_text, flags=re.IGNORECASE):
-                 # If the title is mathematically missing from the start, we prepend it.
-                 clean_text = f'<h2>{clean_title}</h2>\n{clean_text}'
+             ptrn = r'^\s*(<[^>]+>)*\s*' + safe_t + r'\s*(<[^>]+>)*'
+             clean_text = re.sub(ptrn, '', clean_text, count=1, flags=re.IGNORECASE | re.MULTILINE)
 
         div = (
         f'<div xmlns="http://www.w3.org/1999/xhtml">'
         f'<div xmlns="http://www.w3.org/1999/xhtml">'
+        f'<h2>{clean_title}</h2>'
         f'{clean_text}' 
         f'</div></div>'
         )
