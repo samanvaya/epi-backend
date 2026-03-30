@@ -8,7 +8,7 @@ automatically fixes common errors, and maintains an audit log.
 import subprocess
 import re
 import os
-import json
+import jso
 import tempfile
 import datetime
 import xml.etree.ElementTree as ET
@@ -121,7 +121,7 @@ class FHIRValidator:
                 # Execution command with memory constraints to prevent Render container OOM crashes
                 cmd = [
                     "java", 
-                    "-Xmx300m", 
+                    "-Xmx1g",
                     "-XX:+UseSerialGC", 
                     "-jar", jar_path,
                     xml_path,
@@ -129,7 +129,7 @@ class FHIRValidator:
                     "-ig", ig_pkg,
                     "-output", json_path
                 ]
-                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300
                 
                 # We ignore exit code since validator returns non-zero if there are validation errors.
                 # Just read the json output.
@@ -631,7 +631,7 @@ def run_validation_pipeline(
         current_xml = fixed_xml
         update(f"Iteration {iteration}: Applied {len(fix_actions)} fixes. Re-validating...")
 
-    # Save log
+-Xmx300m    # Save log
     log.save()
 
     # Generate summary
