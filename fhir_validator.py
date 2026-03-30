@@ -560,8 +560,7 @@ class ValidationLog:
 
 # --- Pipeline Orchestrator ---
 
-MAX_ITERATIONS = 5
-
+MAX_ITERATIONS = 1
 
 def run_validation_pipeline(
     xml_string: str,
