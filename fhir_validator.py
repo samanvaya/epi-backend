@@ -313,6 +313,13 @@ class AutoFixer:
         fixed, actions = self._fix_invalid_table_attributes(fixed, issues)
         fixes.extend(actions)
 
+        # Structural Typography Fixes (Run unconditionally to ensure reliable browser formatting)
+        fixed, actions = self._fix_qrd_subheaders(fixed, issues)
+        fixes.extend(actions)
+        
+        fixed, actions = self._fix_missing_linebreaks(fixed, issues)
+        fixes.extend(actions)
+
         return fixed, fixes
 
     def _fix_xhtml_namespace(self, xml: str, issues: List[ValidationIssue]) -> Tuple[str, List[FixAction]]:
@@ -516,6 +523,41 @@ class AutoFixer:
             ))
             
         return new_xml, fixes
+
+    def _fix_qrd_subheaders(self, xml: str, issues: List[ValidationIssue]) -> Tuple[str, List[FixAction]]:
+        """Identify plain-text QRD subheaders (e.g. '6.1 List of excipients') and wrap them in <h3> for typography."""
+        fixes = []
+        # Match start of line or > or <br/>
+        # Followed by optional spaces, then standard \d+\.\d+(\.\d+)?\.? [A-Z][^\n<]+
+        ptrn = re.compile(r'(^|>|\n|<br/?>)(?:\s*)(\d+\.\d+(?:\.\d+)?\.?\s+[A-Z][^\n<]+)(?=\n|<|$)', re.MULTILINE)
+        count = len(ptrn.findall(xml))
+        
+        if count > 0:
+            xml = ptrn.sub(r'\1<h3>\2</h3>', xml)
+            fixes.append(FixAction(
+                rule="UI_FORMAT_SUBHEADERS",
+                location="narrative text",
+                description=f"Wrapped {count} QRD sub-sections in <h3> tags for visual clarity"
+            ))
+            
+        return xml, fixes
+
+    def _fix_missing_linebreaks(self, xml: str, issues: List[ValidationIssue]) -> Tuple[str, List[FixAction]]:
+        """Convert \n to <br/> outside of structural HTML tags to prevent text collapsing visually."""
+        fixes = []
+        # Convert raw \n that aren't sandwiched by block tags like >\n< 
+        ptrn = re.compile(r'(?<!>)\n(?!<)')
+        count = len(ptrn.findall(xml))
+        
+        if count > 0:
+            xml = ptrn.sub('<br/>\n', xml)
+            fixes.append(FixAction(
+                rule="UI_FORMAT_LINEBREAKS",
+                location="narrative text",
+                description=f"Injected {count} <br/> html tags to preserve original paragraph spacing"
+            ))
+            
+        return xml, fixes
 
 
 # --- Validation Log ---
