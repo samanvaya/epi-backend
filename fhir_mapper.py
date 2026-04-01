@@ -160,104 +160,62 @@ def create_section(data: Dict[str, str]) -> CompositionSection:
 def organize_qrd_sections(sections_data: List[Dict[str, str]]) -> List[CompositionSection]:
     """
     Rule 6: QRD Template Structure
-    Groups 4.x, 5.x, 6.x
+    Groups 4.x, 5.x, 6.x under synthetic parents, but preserves exact document ordering!
     """
-    flat_sections = {s["section_id"]: create_section(s) for s in sections_data}
-    final_sections = [] # This is the list we will build and return
-    processed_ids = set() # Keep track of sections we've added
-    
-    # Helper to create parent sections (assuming create_parent and group_X are defined elsewhere)
-    # For the purpose of this edit, I'm adding dummy definitions to make the code syntactically valid.
-    # In a real scenario, these would be provided or imported.
-    # Helper to create/get parent
-    def create_parent(pid: str, children: Dict[str, CompositionSection]) -> Union[CompositionSection, None]:
-        # 1. Get or Create Parent Section Object
-        if pid in flat_sections:
-            parent_sec = flat_sections[pid]
-        else:
-            # If not in parser, checking if we have children to justify creating it?
-            if not children: return None
-            
-            # Create synthetic parent
-            mapping = SMPC_SECTION_MAPPING.get(pid)
-            title = mapping["display"] if mapping else f"Section {pid}"
-            # Minimal Div for synth parent
-            div = (
-                f'<div xmlns="http://www.w3.org/1999/xhtml">'
-                f'<div xmlns="http://www.w3.org/1999/xhtml">'
-                f'<h2>{html.escape(title)}</h2>'
-                f'<p>{html.escape(title)}</p>'
-                f'</div></div>'
-            )
-            parent_sec = CompositionSection(
-                title=title,
-                code=CodeableConcept(coding=[Coding(
-                    system="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538", 
-                    code=mapping["code"] if mapping else "00000000",
-                    display=title
-                )]),
-                text=create_narrative(div)
-            )
+    flat_sections = {str(s.get("section_id", "")): create_section(s) for s in sections_data}
+    final_sections = []
+    processed_ids = set()
+    parents_created = {}
 
-        # 2. Attach Children
-        # If the parent already has a 'section' list (from parser?), we might append or replace.
-        # Parser assumes flat structure usually.
-        # We want to put 'children' into 'parent_sec.section'.
+    for s in sections_data:
+        sid = str(s.get("section_id", ""))
+        if not sid or sid in processed_ids:
+            continue
+            
+        parent_id = sid.split(".")[0]
         
-        if children:
-            if parent_sec.section is None:
+        # QRD structural requirements demand grouping for 4, 5, and 6
+        if parent_id in ["4", "5", "6"]:
+            if parent_id not in parents_created:
+                # Get or Create Parent Section Object
+                if parent_id in flat_sections:
+                    parent_sec = flat_sections[parent_id]
+                    processed_ids.add(parent_id)
+                else:
+                    mapping = SMPC_SECTION_MAPPING.get(parent_id)
+                    title = mapping["display"] if mapping else f"Section {parent_id}"
+                    div = (
+                        f'<div xmlns="http://www.w3.org/1999/xhtml">'
+                        f'<div xmlns="http://www.w3.org/1999/xhtml">'
+                        f'<h2>{html.escape(title)}</h2>'
+                        f'<p>{html.escape(title)}</p>'
+                        f'</div></div>'
+                    )
+                    parent_sec = CompositionSection(
+                        title=title,
+                        code=CodeableConcept(coding=[Coding(
+                            system="https://spor.ema.europa.eu/v1/lists/100000155531-100000155538", 
+                            code=mapping["code"] if mapping else "00000000",
+                            display=title
+                        )]),
+                        text=create_narrative(div)
+                    )
+                
                 parent_sec.section = []
+                parents_created[parent_id] = parent_sec
+                final_sections.append(parent_sec)
+                
+            # If it's a child (e.g. 4.1), attach it to the parent
+            if sid != parent_id:
+                parents_created[parent_id].section.append(flat_sections[sid])
+                processed_ids.add(sid)
+                
+        else:
+            # It's an unmapped section (e.g. '0' Preface, '1', '7', 'Annex II')
+            # Simply inject it inline to preserve natural document ordering!
+            final_sections.append(flat_sections[sid])
+            processed_ids.add(sid)
             
-            # Add them in sorted order
-            sorted_keys = sorted(children.keys(), key=lambda x: str(x))
-            for k in sorted_keys:
-                child_sec = children[k]
-                parent_sec.section.append(child_sec)
-                processed_ids.add(k)
-        
-        return parent_sec
-
-    # Logic to populate groups
-    # We need to scan flat_sections to fill groups
-    group_4 = {k: v for k, v in flat_sections.items() if k.startswith("4.") and k != "4"}
-    group_5 = {k: v for k, v in flat_sections.items() if k.startswith("5.") and k != "5"}
-    group_6 = {k: v for k, v in flat_sections.items() if k.startswith("6.") and k != "6"}
-
-    # 1, 2, 3
-    for k in ["1", "2", "3"]:
-        if k in flat_sections:
-            final_sections.append(flat_sections[k])
-            processed_ids.add(k)
-            
-    # 4
-    p4 = create_parent("4", group_4)
-    if p4:
-        final_sections.append(p4)
-        processed_ids.add("4")
-    elif "4" in flat_sections: # Fallback if no children but text
-        final_sections.append(flat_sections["4"])
-        processed_ids.add("4")
-    
-    # 5
-    p5 = create_parent("5", group_5)
-    if p5: 
-        final_sections.append(p5)
-        processed_ids.add("5")
-    
-    # 6
-    p6 = create_parent("6", group_6)
-    if p6: 
-        final_sections.append(p6)
-        processed_ids.add("6")
-    
-    # 7+
-    for k in ["7", "8", "9", "10"]:
-        if k in flat_sections: 
-            final_sections.append(flat_sections[k])
-            processed_ids.add(k)
-        
-    # Append any others (Labelling, etc)
-    # TODO: Make robust for other types
     return final_sections
 
 def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str) -> Composition:
@@ -301,9 +259,7 @@ def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str) -
 
     comp_div = (
         f'<div xmlns="http://www.w3.org/1999/xhtml">'
-        f'<p><b>Product Name:</b> {html.escape(filename)}</p>'
-        f'<p><b>Document Type:</b> {html.escape(doc_type)}</p>'
-        f'<p>This is a generated electronic Product Information (ePI) Composition.</p>'
+        f'<p>electronic Product Information (ePI) Composition</p>'
         f'</div>'
     )
 
