@@ -112,12 +112,13 @@ def create_section(data: Dict[str, str]) -> CompositionSection:
         clean_text = text_content
         
         # DUPLICATE HEADER FIX:
-        # Strip the title from the body if it repeats at the very start to avoid double 
-        # headings, and standardize everything securely under an H2 tag.
+        # Strip all consecutive occurrences of the title from the body if it repeats at the very start 
+        # to avoid double headings, and standardize everything securely under an H2 tag.
         if clean_title:
              safe_t = re.escape(clean_title)
-             ptrn = r'^\s*(<[^>]+>)*\s*' + safe_t + r'\s*(<[^>]+>)*'
-             clean_text = re.sub(ptrn, '', clean_text, count=1, flags=re.IGNORECASE | re.MULTILINE)
+             # Strip 1 or more consecutive title blocks (with or without HTML wrappers) to fix the 'Pharmaceutical particulars' bug
+             ptrn = r'^\s*(?:(?:<[^>]+>)*\s*' + safe_t + r'\s*(?:<[^>]+>)*\s*)+'
+             clean_text = re.sub(ptrn, '', clean_text, flags=re.IGNORECASE | re.MULTILINE)
 
         div = (
         f'<div xmlns="http://www.w3.org/1999/xhtml">'

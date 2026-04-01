@@ -451,11 +451,17 @@ class AutoFixer:
                     if bad_elem.lower() in ['table', 'tr', 'td', 'th', 'tbody', 'thead']:
                         continue
                         
-                    # Remove the element but keep its content
+                    # Remove the element but keep its content. 
+                    # If it's a block element (h1-h6, p, div), replace the tag with a <br/> to prevent text glueing!
+                    # Example: <p>Text</p>Other -> Text<br/>Other instead of TextOther
                     open_pat = re.compile(rf'<{bad_elem}(?:\s[^>]*)?>',  re.IGNORECASE)
                     close_pat = re.compile(rf'</{bad_elem}\s*>', re.IGNORECASE)
-                    new_xml = open_pat.sub('', xml)
-                    new_xml = close_pat.sub('', new_xml)
+                    
+                    rep_str = '<br/>' if bad_elem.lower() in ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li'] else ' '
+                    
+                    new_xml = open_pat.sub('', xml) # open tag usually just disappears
+                    new_xml = close_pat.sub(rep_str, new_xml) # close tag leaves a break/space
+                    
                     if new_xml != xml:
                         fixes.append(FixAction(
                             rule="XHTML_INVALID_ELEMENT",
