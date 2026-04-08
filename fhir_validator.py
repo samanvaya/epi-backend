@@ -310,7 +310,7 @@ class AutoFixer:
         fixed, actions = self._fix_duplicate_xmlns(fixed, issues)
         fixes.extend(actions)
         
-        fixed, actions = self._fix_invalid_table_attributes(fixed, issues)
+        fixed, actions = self._fix_table_borders(fixed, issues)
         fixes.extend(actions)
 
         # Structural Typography Fixes (Run unconditionally to ensure reliable browser formatting)
@@ -499,36 +499,43 @@ class AutoFixer:
                 break
         return xml, fixes
 
-    def _fix_invalid_table_attributes(self, xml: str, issues: List[ValidationIssue]) -> Tuple[str, List[FixAction]]:
-        """Remove presentation attributes from tables that violate FHIR XHTML rules."""
+    def _fix_table_borders(self, xml: str, issues: List[ValidationIssue]) -> Tuple[str, List[FixAction]]:
+        """Normalize tables to ensure layout-agnostic visual borders (EMA ePI convention)."""
         fixes = []
-        # FHIR strict XHTML restricts attributes on table, td, th, tr
-        # Common invalid ones from Word/PDF converters: border, width, cellspacing, cellpadding, valign
-        invalid_attrs = ['border', 'width', 'cellspacing', 'cellpadding', 'valign']
         
+        # Step 1: Strip old/invalid presentation attributes causing validator complaints
+        invalid_attrs = ['cellspacing', 'cellpadding', 'valign']
         has_table_issues = any('attribute' in i.message.lower() and 'not allowed' in i.message.lower() for i in issues)
-        if not has_table_issues:
-            # Only run if validator complained
-            return xml, fixes
-            
-        new_xml = xml
-        count = 0
-        for attr in invalid_attrs:
-            # Regex to find these attributes and strip them. e.g. border="1"
-            pattern = re.compile(rf'\s+{attr}=["\'][^"\']*["\']', re.IGNORECASE)
-            matches = len(pattern.findall(new_xml))
-            if matches > 0:
-                new_xml = pattern.sub('', new_xml)
-                count += matches
+        if has_table_issues:
+            for attr in invalid_attrs:
+                pattern = re.compile(rf'\s+{attr}=["\'][^"\']*["\']', re.IGNORECASE)
+                xml = pattern.sub('', xml)
                 
-        if count > 0:
-            fixes.append(FixAction(
-                rule="XHTML_INVALID_TABLE_ATTR",
-                location="table elements",
-                description=f"Removed {count} invalid styling attributes from tables/cells"
-            ))
+        # Step 2: Inject the requested EMA ePI standard styling attributes into ANY <table> element
+        # <table border="1" style="border-collapse: collapse; width: 100%;">
+        table_pat = re.compile(r'<table\b([^>]*)>', re.IGNORECASE)
+        original_count = len(table_pat.findall(xml))
+        
+        if original_count > 0:
+            def table_repl(match):
+                attrs = match.group(1) or ' '
+                # Clear any existing variants so we can uniformly apply the correct ones
+                attrs = re.sub(r'\bborder=["\'][^"\']*["\']', '', attrs, flags=re.IGNORECASE)
+                attrs = re.sub(r'\bstyle=["\'][^"\']*["\']', '', attrs, flags=re.IGNORECASE)
+                attrs = re.sub(r'\bwidth=["\'][^"\']*["\']', '', attrs, flags=re.IGNORECASE)
+                return f'<table {attrs.strip()} border="1" style="border-collapse: collapse; width: 100%;">'
+                
+            new_xml = table_pat.sub(table_repl, xml)
             
-        return new_xml, fixes
+            if new_xml != xml:
+                fixes.append(FixAction(
+                    rule="UI_FORMAT_TABLE_BORDERS",
+                    location="table elements",
+                    description=f"Injected standard EMA visual styling (border=1, fluid-width) across {original_count} tables"
+                ))
+            return new_xml, fixes
+            
+        return xml, fixes
 
     def _fix_qrd_subheaders(self, xml: str, issues: List[ValidationIssue]) -> Tuple[str, List[FixAction]]:
         """Identify plain-text QRD subheaders (e.g. '6.1 List of excipients') and wrap them in <h3> for typography."""
