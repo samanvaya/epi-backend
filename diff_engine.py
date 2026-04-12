@@ -11,6 +11,15 @@ def clean_for_diff(text: str, preserve_formatting: bool = True) -> str:
     
     normalized = text
     
+    # --- Pre-normalization: Structural equivalence fixes ---
+    # Convert list items to bullet text so <li>text</li> matches "• text" from Word
+    normalized = re.sub(r'<li[^>]*>\s*', '\u2022 ', normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r'</li>', '\n', normalized, flags=re.IGNORECASE)
+    
+    # Add space between adjacent table cells so text from col A and col B don't merge
+    normalized = re.sub(r'</td>\s*<td', '</td> <td', normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r'</th>\s*<th', '</th> <th', normalized, flags=re.IGNORECASE)
+    
     if preserve_formatting:
         # 1. Normalize synonymous tags
         normalized = normalized.replace("<strong>", "<b>").replace("</strong>", "</b>")

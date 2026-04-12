@@ -117,22 +117,30 @@ def process_stateless(file: UploadFile = File(...)):
             import re
             source_parts = []
             for s in sections:
+                # Skip _preface — it is embedded in Composition.text, not a numbered section
+                if s.get('section_id') == '_preface':
+                    continue
                 title = s.get('title', '').strip()
                 text = s.get('text', '').strip()
-                # Strip leading tags to check if the text mathematically starts with the title
+                # Strip leading tags to check if the text starts with the title
                 text_no_tags_start = re.sub(r'^\s*(<[^>]+>)+\s*', '', text)
                 
                 if title and (text.lower().startswith(title.lower()) or text_no_tags_start.lower().startswith(title.lower())):
                     source_parts.append(text)
                 else:
-                    source_parts.append(f"{title} {text}")
+                    source_parts.append(f"{title} {text}" if title else text)
             source_text = " ".join(source_parts)
             
             try:
                 import re
-                # Strip standard ePI boilerplate that artificially reduces fidelity
-                cleaned_xml = re.sub(r'Product Name:.*?(electronic Product Information \(ePI\) Composition\.)', '', fixed_xml, flags=re.DOTALL)
-                cleaned_xml = re.sub(r'<h2>Section \d\.?</h2>\s*<p>Section \d\.?</p>', '', cleaned_xml, flags=re.IGNORECASE)
+                # Strip standard ePI boilerplate that artificially reduces fidelity.
+                # Non-greedy, anchored to avoid accidentally consuming real content.
+                cleaned_xml = re.sub(
+                    r'electronic Product Information \(ePI\) Composition',
+                    '', fixed_xml, flags=re.IGNORECASE
+                )
+                # Strip any residual synthetic Section X headers (e.g. <h2>Section 4</h2>)
+                cleaned_xml = re.sub(r'<h2>Section \d+\.?</h2>', '', cleaned_xml, flags=re.IGNORECASE)
 
                 # Strip all XML/HTML tags for fidelity score — compare plain text only
                 # We revert this back to False to prevent raw FHIR XML tags from appearing as 'massive changes' in the diff tool

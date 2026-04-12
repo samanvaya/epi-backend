@@ -116,9 +116,10 @@ def create_section(data: Dict[str, str]) -> CompositionSection:
         # to avoid double headings, and standardize everything securely under an H2 tag.
         if clean_title:
              safe_t = re.escape(clean_title)
-             # Strip 1 or more consecutive title blocks (with or without HTML wrappers) to fix the 'Pharmaceutical particulars' bug
-             ptrn = r'^\s*(?:(?:<[^>]+>)*\s*' + safe_t + r'\s*(?:<[^>]+>)*\s*)+'
-             clean_text = re.sub(ptrn, '', clean_text, flags=re.IGNORECASE | re.MULTILINE)
+             # Only strip title if it is the EXACT first visible content (not a substring match)
+             # This prevents accidentally deleting legitimate body text.
+             ptrn = r'^\s*(?:(?:<[^>]+>)\s*)*' + safe_t + r'\s*(?:(?:</[^>]+>)\s*)*'
+             clean_text = re.sub(ptrn, '', clean_text, count=1, flags=re.IGNORECASE | re.MULTILINE)
 
         div = (
         f'<div xmlns="http://www.w3.org/1999/xhtml">'
@@ -188,7 +189,6 @@ def organize_qrd_sections(sections_data: List[Dict[str, str]]) -> List[Compositi
                         f'<div xmlns="http://www.w3.org/1999/xhtml">'
                         f'<div xmlns="http://www.w3.org/1999/xhtml">'
                         f'<h2>{html.escape(title)}</h2>'
-                        f'<p>{html.escape(title)}</p>'
                         f'</div></div>'
                     )
                     parent_sec = CompositionSection(
@@ -211,7 +211,10 @@ def organize_qrd_sections(sections_data: List[Dict[str, str]]) -> List[Compositi
                 processed_ids.add(sid)
                 
         else:
-            # It's an unmapped section (e.g. '0' Preface, '1', '7', 'Annex II')
+            # Skip _preface — handled at Composition.text level (Option B, FHIR compliant)
+            if sid == "_preface":
+                continue
+            # It's an unmapped section (e.g. '1', '7', 'Annex II')
             # Simply inject it inline to preserve natural document ordering!
             final_sections.append(flat_sections[sid])
             processed_ids.add(sid)
@@ -257,7 +260,16 @@ def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str) -
     #     )
     # ]
 
+    # Option B: Extract preface section and embed it in the Composition root narrative.
+    # This is fully FHIR compliant — no synthetic section code needed.
+    preface_section = next((s for s in sections_data if s.get("section_id") == "_preface"), None)
+    preface_html = preface_section.get("text", "") if preface_section else ""
+
     comp_div = (
+        f'<div xmlns="http://www.w3.org/1999/xhtml">'
+        f'{preface_html}'  # Inject preface verbatim (already valid HTML from Mammoth)
+        f'</div>'
+    ) if preface_html else (
         f'<div xmlns="http://www.w3.org/1999/xhtml">'
         f'<p>electronic Product Information (ePI) Composition</p>'
         f'</div>'

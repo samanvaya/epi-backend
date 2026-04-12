@@ -37,7 +37,12 @@ SMPC_HEADERS = {
     "7": r"7\.\s+MARKETING\s+AUTHORISATION\s+HOLDER",
     "8": r"8\.\s+MARKETING\s+AUTHORISATION\s+NUMBER",
     "9": r"9\.\s+DATE\s+OF\s+FIRST\s+AUTHORISATION.*",
-    "10": r"10\.\s+DATE\s+OF\s+REVISION.*"
+    "10": r"10\.\s+DATE\s+OF\s+REVISION.*",
+    # Annex sections — critical for full-document fidelity
+    "annex_i": r"ANNEX\s+I[\s\.:]+",
+    "annex_ii": r"ANNEX\s+II[\s\.:]+",
+    "annex_iii": r"ANNEX\s+III[\s\.:]+",
+    "labelling": r"LABELLING",
 }
 
 PIL_HEADERS = {
@@ -52,14 +57,6 @@ PIL_HEADERS = {
 # --- Helper Functions ---
 
 def clean_text_preserving_html(text: str) -> str:
-    """
-    Cleans text but respects HTML tags.
-    Mammoth output is pretty clean but might have artifacts.
-    """
-    # Remove Likely Page Numbers if they appear in text (mammoth usually ignores headers/footers by default which is good!)
-    # Mammoth converts standard body.
-    
-    # Just trim
     return text.strip()
 
 def read_pdf(file_path: str) -> str:
@@ -70,10 +67,6 @@ def read_pdf(file_path: str) -> str:
             extract = page.extract_text()
             if extract:
                 text += extract + "\n"
-        # Escape plain text to HTML-safe ? No, parser expects HTML logic now.
-        # If we return plain text, the strategy must handle it.
-        # But our strategy now expects HTML blocks.
-        # Let's simple-escape the PDF text so it looks like HTML without tags
         return html.escape(text).replace("\n", "<br/>")
     except Exception as e:
         raise ValueError(f"Error reading PDF: {e}")
@@ -92,11 +85,6 @@ def read_docx(file_path: str) -> str:
     """
     try:
         with open(file_path, "rb") as docx_file:
-            # Custom Style Map:
-            # 1. 'u => u': Maps underline formatting to <u> tags.
-            # 2. 'r[style-name='Underline'] => u': Maps named character style "Underline".
-            # 3. 'r[style-name='Hyperlink'] => u': Maps Hyperlink style to underline (optional diff visual).
-            # 4. Header Demotion: h1->h3 etc. to avoid conflict with Section <h2>.
             style_map = """
             u => u
             r[style-name='Underline'] => u
@@ -112,13 +100,7 @@ def read_docx(file_path: str) -> str:
                 style_map=style_map,
                 convert_image=mammoth.images.img_element(convert_image)
             )
-            html_output = result.value # The generated HTML
-            messages = result.messages # Warnings
-            
-            # Post-process formatting if needed? 
-            # Output is like: <p>...</p><table>...</table>
-            # This is exactly what we need.
-            return html_output
+            return result.value
             
     except Exception as e:
         print(f"Mammoth conversion failed: {e}")
@@ -135,132 +117,117 @@ class RegexStrategy(ParsingStrategy):
     """
     Parses HTML content by finding Headers (ignoring tags during search)
     and aggregating HTML blocks between them.
+    Captures preface content (before section 1) into a dedicated bucket.
     """
     def __init__(self, headers: Dict[str, str]):
         self.headers = headers
 
     def parse(self, text: str) -> List[Dict[str, str]]:
-        # text is HTML string.
-        # We need to split it into "Visual Blocks" to scan for headers.
-        # Mammoth returns compact HTML: <p>Heading</p><p>Content</p>
-        # Unlike \n split, we should split by tags closing?
-        # or just regex find the headers in the string?
-        
-        # Issue: <p>1. NAME</p>
-        # If we use re.finditer on the whole string, we find index.
-        # But we need to split *between* indices.
-        
-        # Let's try to map the whole string.
-        # We strip tags to find indices. 
-        # But indices in stripped string DO NOT match indices in HTML string.
-        
-        # Correct Approach for HTML:
-        # Iterate over the HTML "Flow Elements" (p, table, ul, h1-h6).
-        # This requires an HTML parser. 
-        # We don't want to use BeautifulSoup (dependency).
-        # We can loosely split by closing block tags like `</p>`, `</table>`, `</ul>`?
-        
-        # Heuristic Split: Split by `>` and check if it closes a block?
-        # Or just split by regex `(</p>|</table>|</ul>|</li>|<br/>|<br>)`.
-        
-        # Let's use a "Block Splitter" regex.
-        # Known blocks from mammoth: p, table, ul, ol.
-        # We replace `</p>` with `</p>\n` temporarily to allow line splitting logic?
-        
-        # Add newlines after block closers if not present
-        formatted_html = text.replace("</p>", "</p>\n") \
-                             .replace("</table>", "</table>\n") \
-                             .replace("</ul>", "</ul>\n") \
-                             .replace("</ol>", "</ol>\n") \
-                             .replace("</h1>", "</h1>\n") \
-                             .replace("</h2>", "</h2>\n") \
-                             .replace("</h3>", "</h3>\n") 
-                             
+        # Add newlines after block closers for line-based processing
+        formatted_html = text \
+            .replace("</p>", "</p>\n") \
+            .replace("</table>", "</table>\n") \
+            .replace("</ul>", "</ul>\n") \
+            .replace("</ol>", "</ol>\n") \
+            .replace("</h1>", "</h1>\n") \
+            .replace("</h2>", "</h2>\n") \
+            .replace("</h3>", "</h3>\n") \
+            .replace("</h4>", "</h4>\n") \
+            .replace("</h5>", "</h5>\n") \
+            .replace("</h6>", "</h6>\n")
+
         lines = formatted_html.split('\n')
         
         extracts = []
         current_section = None
         current_content = []
+        # Preface: content before the first matched section header
+        preface_content = []
+        found_first_section = False
         
-        # STATEFUL PARSING: Track if we are inside a table
+        # Stateful tracking
         in_table = False
-        
-        def find_header(html_chunk, is_inside_table):
-            # Optimization: Headers are almost always in <p>, <h1>-<h6> tags.
-            # Strict Rule 1: Never treat a <table> or <ul>/<li> as a Header.
-            if html_chunk.strip().startswith("<table") or html_chunk.strip().startswith("<li") or html_chunk.strip().startswith("<ul") or html_chunk.strip().startswith("<ol"):
-                 return None, None
+        in_list = False  # FIX: track list state to avoid splitting lists
 
-            # CRITICAL FIX for Tables:
-            # If we are inside a table, we MUST NOT detect headers.
-            # Otherwise, a row saying "4. Clinical..." will split the table.
-            if is_inside_table:
+        def find_header(html_chunk, is_inside_table, is_inside_list):
+            # Never treat table/list content as a header
+            stripped = html_chunk.strip()
+            if stripped.startswith("<table") or stripped.startswith("<li") \
+               or stripped.startswith("<ul") or stripped.startswith("<ol"):
+                return None, None
+
+            # Critical: never match headers inside tables or lists
+            if is_inside_table or is_inside_list:
                 return None, None
 
             # Strip tags to check text content
             clean = re.sub(r'<[^>]+>', '', html_chunk).strip()
-            # Canonicalize spaces
             clean = re.sub(r'\s+', ' ', clean)
             
-            # Additional Safety: Headers shouldn't be excessively long.
-            if len(clean) > 200: # heuristic
+            # Headers are short by definition
+            if len(clean) > 200:
                 return None, None
             
             for sec_id, ptrn in self.headers.items():
-                # Allow match at start of clean text
-                if re.search(ptrn, clean, re.IGNORECASE): 
-                     return sec_id, clean
+                if re.search(ptrn, clean, re.IGNORECASE):
+                    return sec_id, clean
             return None, None
             
         for line in lines:
-            if not line.strip(): continue
+            if not line.strip():
+                continue
             
-            # Update Table State
-            # Simple check: <table or </table>
-            # Note: A line might contain BOTH if the table is small and on one line?
-            # Mammoth usually pretty prints but let's be careful.
-            # If <table... is in line, we enter table mode.
+            # --- Update structural state BEFORE processing ---
             if "<table" in line:
                 in_table = True
-            
-            # Check for header
-            sec_id, title = find_header(line, in_table)
-            
-            # Update Table State (End)
-            # If </table> is in line, we exit table mode AFTER processing this line 
-            # (matches are done above, so we don't start a header on the closing line ideally, 
-            # unless the header IS the closing line? unlikely).
-            # Wait, if we are in_table=True, find_header returns None.
-            # So if </table> is here, we are still technically in table for this line.
-            # We exit AFTER.
+            if "<ul" in line or "<ol" in line:
+                in_list = True
+
+            # Check for a section header
+            sec_id, title = find_header(line, in_table, in_list)
+
+            # --- Update structural state AFTER header check ---
             if "</table>" in line:
                 in_table = False
+            if "</ul>" in line or "</ol>" in line:
+                in_list = False
             
             if sec_id:
-                # New Section
+                found_first_section = True
+                # Save the previous section (or finalize preface)
                 if current_section:
                     extracts.append({
                         "section_id": current_section['id'],
                         "title": current_section['title'],
-                        "text": "".join(current_content).strip() # Join back to HTML string
+                        "text": "".join(current_content).strip()
                     })
                 
                 current_section = {'id': sec_id, 'title': title}
-                current_content = [] 
-                
-                # Should we include the Header Line in the content?
-                # Usually SmPC headers are NOT part of the body text.
-                # So we skip adding `line` to `current_content`.
+                current_content = []
             else:
                 if current_section:
                     current_content.append(line)
+                elif not found_first_section:
+                    # Accumulate into preface bucket (Option B: goes to Composition root narrative)
+                    preface_content.append(line)
         
+        # Finalize last section
         if current_section:
-             extracts.append({
+            extracts.append({
                 "section_id": current_section['id'],
                 "title": current_section['title'],
                 "text": "".join(current_content).strip()
-             })
+            })
+        
+        # Inject preface as a special section with id "_preface"
+        # fhir_mapper will merge this into Composition.text.div (Option B — FHIR compliant)
+        preface_text = "".join(preface_content).strip()
+        if preface_text:
+            extracts.insert(0, {
+                "section_id": "_preface",
+                "title": "Preface",
+                "text": preface_text
+            })
              
         return extracts
 
@@ -274,10 +241,6 @@ class PILStrategy(RegexStrategy):
 
 class LabellingStrategy(ParsingStrategy):
     def parse(self, text: str) -> List[Dict[str, str]]:
-        # text is HTML.
-        # Logic: find keys in paragraphs.
-        
-        # Normalize structural newlines
         formatted_html = text.replace("</p>", "</p>\n") \
                              .replace("</table>", "</table>\n") \
                              .replace("</ul>", "</ul>\n") \
@@ -294,33 +257,32 @@ class LabellingStrategy(ParsingStrategy):
         current_content = []
         
         for line in lines:
-            # Strip tags checking
             clean = re.sub(r'<[^>]+>', '', line).strip()
             clean_upper = clean.upper()
             
             is_key = False
             for k in keys:
-                 if clean_upper.startswith(k):
-                     if current_key:
-                         extracts.append({
-                             "section_id": "L_" + current_key.replace(" ", "_"),
-                             "title": current_key,
-                             "text": "".join(current_content).strip()
-                         })
-                     current_key = k
-                     current_content = [line] # Keep the HTML line containing key
-                     is_key = True
-                     break
+                if clean_upper.startswith(k):
+                    if current_key:
+                        extracts.append({
+                            "section_id": "L_" + current_key.replace(" ", "_"),
+                            "title": current_key,
+                            "text": "".join(current_content).strip()
+                        })
+                    current_key = k
+                    current_content = [line]
+                    is_key = True
+                    break
             
             if not is_key and current_key:
-                 current_content.append(line)
+                current_content.append(line)
 
         if current_key:
-             extracts.append({
-                 "section_id": "L_" + current_key.replace(" ", "_"),
-                 "title": current_key,
-                 "text": "".join(current_content).strip()
-             })
+            extracts.append({
+                "section_id": "L_" + current_key.replace(" ", "_"),
+                "title": current_key,
+                "text": "".join(current_content).strip()
+            })
         return extracts
 
 # --- Factory ---
@@ -335,7 +297,6 @@ class DocumentFactory:
 
     @staticmethod
     def detect_type(text: str) -> str:
-        # Detect based on stripped content
         clean = re.sub(r'<[^>]+>', '', text).upper()
         if "QUALITATIVE AND QUANTITATIVE COMPOSITION" in clean: return "SmPC"
         if "WHAT YOU NEED TO KNOW BEFORE YOU" in clean: return "PIL"
