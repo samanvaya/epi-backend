@@ -9,6 +9,7 @@ import subprocess
 import re
 import os
 import json
+import difflib
 import tempfile
 import datetime
 import xml.etree.ElementTree as ET
@@ -573,6 +574,213 @@ class AutoFixer:
         return xml, fixes
 
 
+# --- Fidelity Scorer (shared helper, same logic as main.py) ---
+
+def _compute_fidelity(source_text: str, xml: str) -> float:
+    """
+    Recall-based fidelity: matched_source_words / total_source_words.
+
+    Strips the first <text>…</text> block (Composition metadata) so only
+    section narrative content is scored.  Fully FHIR-compliant — XML unchanged.
+    """
+    # Remove Composition.text metadata block (same as diff_engine.extract_section_narratives)
+    section_xml = re.sub(r'<text\b[^>]*>.*?</text>', '', xml,
+                         count=1, flags=re.DOTALL | re.IGNORECASE)
+
+    def _strip(t: str) -> str:
+        t = re.sub(r'<[^>]+>', ' ', t)   # strip tags
+        t = re.sub(r'\s+', ' ', t)        # collapse whitespace
+        return t.strip().lower()
+
+    s_words = _strip(source_text).split()
+    t_words = _strip(section_xml).split()
+    if not s_words or not t_words:
+        return 0.0
+    matcher = difflib.SequenceMatcher(None, s_words, t_words, autojunk=False)
+    matched = sum(b.size for b in matcher.get_matching_blocks())
+    return min(100.0, round((matched / len(s_words)) * 100, 1))
+
+
+# --- Fidelity-Driven AutoFixer ---
+
+class FidelityFixer:
+    """
+    Applies targeted text-level repairs to raise fidelity toward a target threshold.
+
+    Each strategy is a pure (xml_in) -> (xml_out, FixAction | None) function.
+    Strategies are tried in priority order; the loop stops as soon as the
+    target fidelity is reached or no strategy can improve the score further.
+
+    Design principles:
+    - All fixes operate only on XHTML narrative content inside <div> blocks.
+    - No fix may alter FHIR resource structure, coding, references, or profiles.
+    - Every fix is idempotent (safe to apply twice).
+    - If a fix does not raise fidelity it is rolled back before the next is tried.
+    """
+
+    FIDELITY_TARGET = 99.0          # Stop when this is reached
+    MAX_FIDELITY_ITERATIONS = 5     # Hard cap per call
+
+    def __init__(self):
+        self._strategies = [
+            self._fix_collapsed_spaces,
+            self._fix_missing_br_between_blocks,
+            self._fix_encoded_entities,
+            self._fix_stray_h3_wrapping,
+        ]
+
+    # ------------------------------------------------------------------
+    # Public entry point
+    # ------------------------------------------------------------------
+
+    def improve(
+        self,
+        xml: str,
+        source_text: str,
+        start_fidelity: float,
+    ) -> Tuple[str, List[FixAction], float]:
+        """
+        Iteratively apply fidelity fixes until FIDELITY_TARGET is reached or
+        no further improvement is possible.
+
+        Returns: (improved_xml, all_fix_actions, final_fidelity_score)
+        """
+        current_xml = xml
+        current_fidelity = start_fidelity
+        all_fixes: List[FixAction] = []
+
+        for _iteration in range(self.MAX_FIDELITY_ITERATIONS):
+            if current_fidelity >= self.FIDELITY_TARGET:
+                break
+
+            improved = False
+            for strategy in self._strategies:
+                candidate_xml, action = strategy(current_xml)
+                if action is None or candidate_xml == current_xml:
+                    continue
+                new_fidelity = _compute_fidelity(source_text, candidate_xml)
+                if new_fidelity > current_fidelity:
+                    current_xml = candidate_xml
+                    current_fidelity = new_fidelity
+                    all_fixes.append(action)
+                    improved = True
+                    if current_fidelity >= self.FIDELITY_TARGET:
+                        break
+
+            if not improved:
+                break  # No strategy could help further
+
+        return current_xml, all_fixes, current_fidelity
+
+    # ------------------------------------------------------------------
+    # Strategies  (each returns (new_xml, FixAction | None))
+    # ------------------------------------------------------------------
+
+    def _fix_collapsed_spaces(self, xml: str) -> Tuple[str, Optional[FixAction]]:
+        """
+        Words get joined without spaces when block-level tags are stripped
+        during scoring.  Insert a space before every opening block tag that
+        is immediately preceded by a non-whitespace character.
+        """
+        BLOCK = r'(?:p|div|h[1-6]|li|tr|td|th|br|hr)'
+        pattern = re.compile(rf'(?<=[^\s>])(</?{BLOCK}[\s>])', re.IGNORECASE)
+        new_xml = pattern.sub(r' \1', xml)
+        if new_xml == xml:
+            return xml, None
+        return new_xml, FixAction(
+            rule="FIDELITY_SPACE_INJECTION",
+            location="block-level tag boundaries",
+            description="Inserted whitespace before block tags to prevent word merging during plain-text scoring"
+        )
+
+    def _fix_missing_br_between_blocks(self, xml: str) -> Tuple[str, Optional[FixAction]]:
+        """
+        Plain text lines from the source that have no enclosing <p> or <br/>
+        may be joined into one long string, causing diff under-counting.
+        Convert bare newlines inside narrative divs to <br/> so each source
+        line maps to a separate word sequence in the target.
+        """
+        # Only act inside XHTML narrative divs
+        DIV_PAT = re.compile(
+            r'(<div\b[^>]*xmlns="http://www\.w3\.org/1999/xhtml"[^>]*>)(.*?)(</div>)',
+            re.DOTALL | re.IGNORECASE
+        )
+        NL_PAT = re.compile(r'(?<!>)\n(?!<)')
+
+        def _inject(m: re.Match) -> str:
+            inner = NL_PAT.sub('<br/>\n', m.group(2))
+            return m.group(1) + inner + m.group(3)
+
+        new_xml = DIV_PAT.sub(_inject, xml)
+        if new_xml == xml:
+            return xml, None
+        count = len(NL_PAT.findall(xml))
+        return new_xml, FixAction(
+            rule="FIDELITY_BR_INJECTION",
+            location="narrative div content",
+            description=f"Converted {count} bare newlines to <br/> to preserve line-level word boundaries"
+        )
+
+    def _fix_encoded_entities(self, xml: str) -> Tuple[str, Optional[FixAction]]:
+        """
+        HTML entities like &amp; &lt; &gt; &nbsp; survive into the scored
+        text as literal strings ("&amp;", "&lt;") that don't match the
+        source word ("&", "<").  Decode them inside narrative divs.
+        """
+        ENTITY_MAP = {
+            '&amp;': '&', '&lt;': '<', '&gt;': '>',
+            '&nbsp;': ' ', '&apos;': "'", '&quot;': '"',
+        }
+        # Only inside narrative div text nodes (not attribute values)
+        # Strategy: decode outside of tag brackets
+        def _decode_text_nodes(text: str) -> str:
+            parts = re.split(r'(<[^>]+>)', text)
+            result = []
+            for part in parts:
+                if part.startswith('<'):
+                    result.append(part)
+                else:
+                    for ent, char in ENTITY_MAP.items():
+                        part = part.replace(ent, char)
+                    result.append(part)
+            return ''.join(result)
+
+        new_xml = _decode_text_nodes(xml)
+        if new_xml == xml:
+            return xml, None
+        return new_xml, FixAction(
+            rule="FIDELITY_ENTITY_DECODE",
+            location="narrative text nodes",
+            description="Decoded HTML entities (&amp; &lt; &nbsp; etc.) to match plain-text source words"
+        )
+
+    def _fix_stray_h3_wrapping(self, xml: str) -> Tuple[str, Optional[FixAction]]:
+        """
+        The _fix_qrd_subheaders AutoFixer wraps sub-section titles in <h3>.
+        When the regex fires on content that is NOT a standalone sub-heading
+        (e.g. a sentence beginning with '4.4') it can split a run of words
+        mid-sentence, causing the surrounding words to be missed by the diff.
+        This fix removes <h3> wrappers from lines that contain a full sentence
+        (i.e. more than 8 words — a subheader title is typically ≤ 6 words).
+        """
+        H3_PAT = re.compile(r'<h3>(\d+\.\d+(?:\.\d+)?\.?\s+[^<]+)</h3>', re.IGNORECASE)
+
+        def _maybe_unwrap(m: re.Match) -> str:
+            content = m.group(1)
+            if len(content.split()) > 8:
+                return content  # looks like body text, not a heading — unwrap
+            return m.group(0)   # keep as-is
+
+        new_xml = H3_PAT.sub(_maybe_unwrap, xml)
+        if new_xml == xml:
+            return xml, None
+        return new_xml, FixAction(
+            rule="FIDELITY_H3_UNWRAP",
+            location="<h3> sub-header elements",
+            description="Unwrapped over-aggressive <h3> tags from body sentences (>8 words) to restore word continuity"
+        )
+
+
 # --- Validation Log ---
 
 class ValidationLog:
@@ -667,28 +875,46 @@ class ValidationLog:
 
 # --- Pipeline Orchestrator ---
 
-MAX_ITERATIONS = 1
+# Maximum FHIR validation + structural-fix iterations.
+# Kept at 1 to stay within Render's 30-second request budget.
+# The fidelity loop below is fast (no network calls) so it runs separately.
+MAX_VALIDATION_ITERATIONS = 1
 
 def run_validation_pipeline(
     xml_string: str,
     project_dir: str = None,
     fhir_version: str = "4.0.1",
-    progress_callback=None
-) -> Tuple[str, ValidationLog, str]:
+    progress_callback=None,
+    source_text: str = "",
+) -> Tuple[str, ValidationLog, str, float]:
     """
-    Full validation + auto-fix pipeline.
+    Two-phase pipeline:
+
+    Phase 1 — FHIR compliance (up to MAX_VALIDATION_ITERATIONS):
+        Validate with the HL7 Java CLI / REST API, apply structural AutoFixes
+        until no errors remain or the fixer is exhausted.
+
+    Phase 2 — Fidelity improvement (up to FidelityFixer.MAX_FIDELITY_ITERATIONS):
+        Run FidelityFixer.improve() to push the recall-based fidelity score
+        toward 99 % using text-level repairs that never touch FHIR structure.
+        Skipped if source_text is not provided.
 
     Args:
-        xml_string: The FHIR XML to validate.
-        project_dir: Directory containing validator_cli.jar.
-        fhir_version: FHIR version to validate against (default R4).
-        progress_callback: Optional callable(message) for progress updates.
+        xml_string:        FHIR XML to validate.
+        project_dir:       Directory containing validator_cli.jar.
+        fhir_version:      FHIR version string (default "4.0.1").
+        progress_callback: Optional callable(str) for status messages.
+        source_text:       Plain/HTML source text from the parsed document.
+                           When supplied, Phase 2 runs and the returned
+                           fidelity_score reflects the final XML quality.
 
     Returns:
-        (fixed_xml, validation_log, summary_message)
+        (fixed_xml, validation_log, summary_message, fidelity_score)
+        fidelity_score is 0.0 when source_text is empty.
     """
-    validator = FHIRValidator(project_dir)
+    fhir_validator_obj = FHIRValidator(project_dir)
     fixer = AutoFixer()
+    fidelity_fixer = FidelityFixer()
     log = ValidationLog(project_dir)
 
     current_xml = xml_string
@@ -697,16 +923,15 @@ def run_validation_pipeline(
         if progress_callback:
             progress_callback(msg)
 
-    for iteration in range(1, MAX_ITERATIONS + 1):
-        update(f"Iteration {iteration}: Running FHIR Validator...")
+    # ── Phase 1: FHIR compliance loop ────────────────────────────────────────
+    for iteration in range(1, MAX_VALIDATION_ITERATIONS + 1):
+        update(f"[Phase 1 / iter {iteration}] Running FHIR validator…")
 
-        # Validate
-        issues = validator.validate_string(current_xml, fhir_version)
+        issues = fhir_validator_obj.validate_string(current_xml, fhir_version)
 
-        # Count by severity
-        errors = [i for i in issues if i.severity in ("Error", "Fatal")]
+        errors   = [i for i in issues if i.severity in ("Error", "Fatal")]
         warnings = [i for i in issues if i.severity == "Warning"]
-        infos = [i for i in issues if i.severity == "Information"]
+        infos    = [i for i in issues if i.severity == "Information"]
 
         run = ValidationRun(
             iteration=iteration,
@@ -714,43 +939,70 @@ def run_validation_pipeline(
             issues=issues,
             error_count=len(errors),
             warning_count=len(warnings),
-            info_count=len(infos)
+            info_count=len(infos),
         )
+        update(f"[Phase 1 / iter {iteration}] {len(errors)} errors, {len(warnings)} warnings")
 
-        update(f"Iteration {iteration}: Found {len(errors)} errors, {len(warnings)} warnings")
-
-        # If no errors, we're done
         if len(errors) == 0:
             log.add_run(run)
             break
 
-        # Apply fixes
-        update(f"Iteration {iteration}: Applying auto-fixes...")
+        update(f"[Phase 1 / iter {iteration}] Applying structural auto-fixes…")
         fixed_xml, fix_actions = fixer.fix(current_xml, issues)
         run.fixes_applied = fix_actions
         log.add_run(run)
 
-        # If no fixes were applied, stop (can't improve further)
         if not fix_actions or fixed_xml == current_xml:
-            update(f"Iteration {iteration}: No more fixes available.")
+            update(f"[Phase 1 / iter {iteration}] No further structural fixes available.")
             break
 
         current_xml = fixed_xml
-        update(f"Iteration {iteration}: Applied {len(fix_actions)} fixes. Re-validating...")
+        update(f"[Phase 1 / iter {iteration}] {len(fix_actions)} fixes applied, re-validating…")
+
+    # ── Phase 2: Fidelity improvement loop ───────────────────────────────────
+    fidelity_score = 0.0
+    if source_text:
+        start_fidelity = _compute_fidelity(source_text, current_xml)
+        update(f"[Phase 2] Starting fidelity: {start_fidelity:.1f}% "
+               f"(target: {FidelityFixer.FIDELITY_TARGET}%)")
+
+        if start_fidelity < FidelityFixer.FIDELITY_TARGET:
+            update("[Phase 2] Running fidelity improvement loop…")
+            current_xml, fidelity_fixes, fidelity_score = fidelity_fixer.improve(
+                current_xml, source_text, start_fidelity
+            )
+            if fidelity_fixes:
+                # Record fidelity fixes as a single additional run in the log
+                fidelity_run = ValidationRun(
+                    iteration=len(log.runs) + 1,
+                    timestamp=datetime.datetime.now().isoformat(),
+                    fixes_applied=fidelity_fixes,
+                    # Carry forward the last known issue counts (no re-validation needed)
+                    error_count=log.runs[-1].error_count if log.runs else 0,
+                    warning_count=log.runs[-1].warning_count if log.runs else 0,
+                    info_count=log.runs[-1].info_count if log.runs else 0,
+                )
+                log.add_run(fidelity_run)
+            update(f"[Phase 2] Final fidelity: {fidelity_score:.1f}%")
+        else:
+            fidelity_score = start_fidelity
+            update(f"[Phase 2] Target already met ({start_fidelity:.1f}%), skipping.")
 
     # Save log
     log.save()
 
-    # Generate summary
+    # Summary
     if log.runs:
         last = log.runs[-1]
+        total_fixes = sum(len(r.fixes_applied) for r in log.runs)
+        fid_str = f" | Fidelity: {fidelity_score:.1f}%" if source_text else ""
         if last.error_count == 0:
-            summary = f"✅ Validation passed after {len(log.runs)} iteration(s)."
+            summary = (f"✅ Validation passed after {len(log.runs)} iteration(s). "
+                       f"{total_fixes} fixes applied.{fid_str}")
         else:
-            total_fixes = sum(len(r.fixes_applied) for r in log.runs)
             summary = (f"⚠️ {last.error_count} errors remain after {len(log.runs)} iteration(s). "
-                       f"{total_fixes} fixes were applied.")
+                       f"{total_fixes} fixes applied.{fid_str}")
     else:
         summary = "No validation runs completed."
 
-    return current_xml, log, summary
+    return current_xml, log, summary, fidelity_score

@@ -6,7 +6,6 @@ import json
 import shutil
 import logging
 import tempfile
-import difflib
 from dataclasses import asdict
 
 import doc_parser as parser
@@ -68,10 +67,28 @@ def process_stateless(file: UploadFile = File(...)):
             comp = mapper.create_doc_composition(doc_obj, "urn:uuid:med-prod", "urn:uuid:org")
             original_xml = mapper.resource_to_xml(comp)
 
-            # 3. Run full validation + auto-fix pipeline (up to 5 iterations)
+            # Build source_text for fidelity scoring (skip _preface — it lives in
+            # Composition.text metadata, not in a numbered section)
+            source_parts = []
+            for s in sections:
+                if s.get('section_id') == '_preface':
+                    continue
+                title = s.get('title', '').strip()
+                text  = s.get('text',  '').strip()
+                text_no_tags = re.sub(r'^\s*(<[^>]+>)+\s*', '', text)
+                if title and (text.lower().startswith(title.lower())
+                              or text_no_tags.lower().startswith(title.lower())):
+                    source_parts.append(text)
+                else:
+                    source_parts.append(f"{title} {text}" if title else text)
+            source_text = " ".join(source_parts)
+
+            # 3. Run full validation + fidelity-improvement pipeline
             project_dir = os.path.dirname(os.path.abspath(__file__))
-            fixed_xml, val_log, summary = validator.run_validation_pipeline(
-                original_xml, project_dir=project_dir
+            fixed_xml, val_log, summary, fidelity_score = validator.run_validation_pipeline(
+                original_xml,
+                project_dir=project_dir,
+                source_text=source_text,
             )
 
             last_run = val_log.runs[-1] if val_log.runs else None
@@ -114,60 +131,10 @@ def process_stateless(file: UploadFile = File(...)):
             # Markdown report
             validation_report_md = val_log.to_markdown()
 
-            # 4. Diff comparison: source text vs validated XML
-            source_parts = []
-            for s in sections:
-                # Skip _preface — it is embedded in Composition.text, not a numbered section
-                if s.get('section_id') == '_preface':
-                    continue
-                title = s.get('title', '').strip()
-                text = s.get('text', '').strip()
-                # Strip leading tags to check if the text starts with the title
-                text_no_tags_start = re.sub(r'^\s*(<[^>]+>)+\s*', '', text)
-                
-                if title and (text.lower().startswith(title.lower()) or text_no_tags_start.lower().startswith(title.lower())):
-                    source_parts.append(text)
-                else:
-                    source_parts.append(f"{title} {text}" if title else text)
-            source_text = " ".join(source_parts)
-            
+            # 4. Visual diff (fidelity_score already returned by the pipeline)
             try:
-                # --- Fidelity score: recall-based, section-narrative-only ---
-                #
-                # metric: recall = matched_words / source_words
-                #   • ratio() = 2M/(S+T) penalises the FHIR structural overhead
-                #     (Composition.text metadata, extra <h2> parents) even when every
-                #     source word is faithfully present in the XML.  recall = M/S does not.
-                #
-                # target: section narratives only (Composition.text metadata excluded)
-                #   • The Composition.text.div contains synthetically generated metadata
-                #     ("Product Name: ...", "Document Type: SmPC", preface text) — words
-                #     in target but not in source — inflating T and suppressing ratio().
-                #   • extract_section_narratives() removes that first <text> block so only
-                #     the actual SmPC section content is scored.
-                #
-                # autojunk=False: avoids SequenceMatcher silently skipping common medical
-                #   phrases that appear in >1% of the word sequence.
-                #
-                # These are scoring-only changes.  The FHIR XML is unchanged.
-
-                section_target = diff_engine.extract_section_narratives(fixed_xml)
-                s_clean = diff_engine.clean_for_diff(source_text, preserve_formatting=False)
-                t_clean = diff_engine.clean_for_diff(section_target, preserve_formatting=False)
-
-                s_words = s_clean.split()
-                t_words = t_clean.split()
-                if s_words and t_words:
-                    matcher = difflib.SequenceMatcher(None, s_words, t_words, autojunk=False)
-                    matched = sum(block.size for block in matcher.get_matching_blocks())
-                    fidelity_score = round(min(100.0, (matched / len(s_words)) * 100), 1)
-                else:
-                    fidelity_score = 0.0
-
-                # Visual diff uses the full XML for a complete WYSIWYG review
                 diff_html = diff_engine.generate_html_diff(source_text, fixed_xml)
             except Exception:
-                fidelity_score = 0.0
                 diff_html = ""
 
             # 5. Generate FHIR Bundle (JSON + XML) from this document
