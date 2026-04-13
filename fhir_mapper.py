@@ -106,13 +106,13 @@ def create_section(data: Dict[str, str]) -> CompositionSection:
         is_html_source = True
         
     clean_title = html.escape(title or "")
-    
+
     if is_html_source:
         # Already HTML-safe.
         clean_text = text_content
-        
+
         # DUPLICATE HEADER FIX:
-        # Strip all consecutive occurrences of the title from the body if it repeats at the very start 
+        # Strip all consecutive occurrences of the title from the body if it repeats at the very start
         # to avoid double headings, and standardize everything securely under an H2 tag.
         if clean_title:
              safe_t = re.escape(clean_title)
@@ -121,17 +121,26 @@ def create_section(data: Dict[str, str]) -> CompositionSection:
              ptrn = r'^\s*(?:(?:<[^>]+>)\s*)*' + safe_t + r'\s*(?:(?:</[^>]+>)\s*)*'
              clean_text = re.sub(ptrn, '', clean_text, count=1, flags=re.IGNORECASE | re.MULTILINE)
 
+        # TABLE BORDER FIX: Inject EMA QRD standard border styling on every table
+        # directly at mapping time so borders are present before validation runs.
+        def _add_table_borders(m):
+            attrs = re.sub(r'\bborder=["\'][^"\']*["\']', '', m.group(1) or '', flags=re.IGNORECASE)
+            attrs = re.sub(r'\bstyle=["\'][^"\']*["\']', '', attrs, flags=re.IGNORECASE)
+            attrs = re.sub(r'\bwidth=["\'][^"\']*["\']', '', attrs, flags=re.IGNORECASE)
+            return f'<table {attrs.strip()} border="1" style="border-collapse: collapse; width: 100%;">'
+        clean_text = re.sub(r'<table\b([^>]*)>', _add_table_borders, clean_text, flags=re.IGNORECASE)
+
         div = (
         f'<div xmlns="http://www.w3.org/1999/xhtml">'
         f'<div xmlns="http://www.w3.org/1999/xhtml">'
         f'<h2>{clean_title}</h2>'
-        f'{clean_text}' 
+        f'{clean_text}'
         f'</div></div>'
         )
     else:
         # Plain text (PDF source likely) - escape and line breaks
         clean_text = html.escape(text_content or "").replace(chr(10), "<br/>")
-        
+
         div = (
         f'<div xmlns="http://www.w3.org/1999/xhtml">'
         f'<div xmlns="http://www.w3.org/1999/xhtml">'

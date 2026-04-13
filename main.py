@@ -72,7 +72,8 @@ def process_stateless(file: UploadFile = File(...)):
             #   1. Skip _preface — lives in Composition.text metadata, not a numbered section
             #   2. Skip non-SmPC section IDs (labelling, annex variants) — not mapped to FHIR sections
             #   3. Skip duplicate section IDs — prevent word-count inflation from repeated IDs
-            _NON_SMPC_IDS = {'labelling', 'annex_i', 'annex_ii', 'annex_iii'}
+            # labelling is now included — parser accumulates full Annex III content into it
+            _NON_SMPC_IDS = {'annex_i', 'annex_ii', 'annex_iii'}
             source_parts = []
             seen_ids: set = set()
             for s in sections:

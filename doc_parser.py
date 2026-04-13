@@ -148,35 +148,40 @@ class RegexStrategy(ParsingStrategy):
         # Stateful tracking
         in_table = False
         in_list = False  # FIX: track list state to avoid splitting lists
+        # Once we enter an annex/labelling section, stop matching new headers so all
+        # subsequent content accumulates into that section (avoids duplicate section IDs
+        # and preserves Annex III labelling content intact).
+        _ANNEX_IDS = {'labelling', 'annex_i', 'annex_ii', 'annex_iii'}
+        in_annex = False
 
-        def find_header(html_chunk, is_inside_table, is_inside_list):
-            # Never treat table/list content as a header
+        def find_header(html_chunk, is_inside_table, is_inside_list, is_inside_annex):
+            # Never treat table/list/annex content as a header
             stripped = html_chunk.strip()
             if stripped.startswith("<table") or stripped.startswith("<li") \
                or stripped.startswith("<ul") or stripped.startswith("<ol"):
                 return None, None
 
-            # Critical: never match headers inside tables or lists
-            if is_inside_table or is_inside_list:
+            # Critical: never match headers inside tables, lists, or annex blocks
+            if is_inside_table or is_inside_list or is_inside_annex:
                 return None, None
 
             # Strip tags to check text content
             clean = re.sub(r'<[^>]+>', '', html_chunk).strip()
             clean = re.sub(r'\s+', ' ', clean)
-            
+
             # Headers are short by definition
             if len(clean) > 200:
                 return None, None
-            
+
             for sec_id, ptrn in self.headers.items():
                 if re.search(ptrn, clean, re.IGNORECASE):
                     return sec_id, clean
             return None, None
-            
+
         for line in lines:
             if not line.strip():
                 continue
-            
+
             # --- Update structural state BEFORE processing ---
             if "<table" in line:
                 in_table = True
@@ -184,14 +189,14 @@ class RegexStrategy(ParsingStrategy):
                 in_list = True
 
             # Check for a section header
-            sec_id, title = find_header(line, in_table, in_list)
+            sec_id, title = find_header(line, in_table, in_list, in_annex)
 
             # --- Update structural state AFTER header check ---
             if "</table>" in line:
                 in_table = False
             if "</ul>" in line or "</ol>" in line:
                 in_list = False
-            
+
             if sec_id:
                 found_first_section = True
                 # Save the previous section (or finalize preface)
@@ -201,7 +206,12 @@ class RegexStrategy(ParsingStrategy):
                         "title": current_section['title'],
                         "text": "".join(current_content).strip()
                     })
-                
+
+                # Once we enter an annex/labelling section, lock into it so all
+                # subsequent numbered sub-items are content, not new sections.
+                if sec_id in _ANNEX_IDS:
+                    in_annex = True
+
                 current_section = {'id': sec_id, 'title': title}
                 current_content = []
             else:

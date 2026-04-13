@@ -944,6 +944,14 @@ def run_validation_pipeline(
         update(f"[Phase 1 / iter {iteration}] {len(errors)} errors, {len(warnings)} warnings")
 
         if len(errors) == 0:
+            # Always apply structural/formatting fixes (table borders, sub-headers, etc.)
+            # even when FHIR validation passes — the fixer runs unconditionally so these
+            # cosmetic improvements are never skipped.
+            update(f"[Phase 1 / iter {iteration}] Applying formatting fixes (0 errors)…")
+            fixed_xml, fix_actions = fixer.fix(current_xml, issues)
+            run.fixes_applied = fix_actions
+            if fix_actions:
+                current_xml = fixed_xml
             log.add_run(run)
             break
 
