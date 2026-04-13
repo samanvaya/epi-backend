@@ -123,12 +123,24 @@ def create_section(data: Dict[str, str]) -> CompositionSection:
 
         # TABLE BORDER FIX: Inject EMA QRD standard border styling on every table
         # directly at mapping time so borders are present before validation runs.
+        # Uses explicit CSS borders on table + cells because the deprecated HTML
+        # border="1" attribute is ignored by strict XHTML/FHIR renderers.
+        _CELL_BORDER_STYLE = "border: 1px solid black; padding: 4px;"
+        _TABLE_STYLE = "border-collapse: collapse; width: 100%; border: 1px solid black;"
+
         def _add_table_borders(m):
             attrs = re.sub(r'\bborder=["\'][^"\']*["\']', '', m.group(1) or '', flags=re.IGNORECASE)
             attrs = re.sub(r'\bstyle=["\'][^"\']*["\']', '', attrs, flags=re.IGNORECASE)
             attrs = re.sub(r'\bwidth=["\'][^"\']*["\']', '', attrs, flags=re.IGNORECASE)
-            return f'<table {attrs.strip()} border="1" style="border-collapse: collapse; width: 100%;">'
+            return f'<table {attrs.strip()} border="1" style="{_TABLE_STYLE}">'
         clean_text = re.sub(r'<table\b([^>]*)>', _add_table_borders, clean_text, flags=re.IGNORECASE)
+
+        def _add_cell_borders(m):
+            tag = m.group(1)
+            existing = m.group(2) or ''
+            existing = re.sub(r'\bstyle=["\'][^"\']*["\']', '', existing, flags=re.IGNORECASE)
+            return f'<{tag} {existing.strip()} style="{_CELL_BORDER_STYLE}">'.replace('  ', ' ')
+        clean_text = re.sub(r'<(td|th)\b([^>]*)>', _add_cell_borders, clean_text, flags=re.IGNORECASE)
 
         div = (
         f'<div xmlns="http://www.w3.org/1999/xhtml">'

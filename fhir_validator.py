@@ -500,10 +500,13 @@ class AutoFixer:
                 break
         return xml, fixes
 
+    _CELL_BORDER_STYLE = "border: 1px solid black; padding: 4px;"
+    _TABLE_STYLE = "border-collapse: collapse; width: 100%; border: 1px solid black;"
+
     def _fix_table_borders(self, xml: str, issues: List[ValidationIssue]) -> Tuple[str, List[FixAction]]:
         """Normalize tables to ensure layout-agnostic visual borders (EMA ePI convention)."""
         fixes = []
-        
+
         # Step 1: Strip old/invalid presentation attributes causing validator complaints
         invalid_attrs = ['cellspacing', 'cellpadding', 'valign']
         has_table_issues = any('attribute' in i.message.lower() and 'not allowed' in i.message.lower() for i in issues)
@@ -511,31 +514,38 @@ class AutoFixer:
             for attr in invalid_attrs:
                 pattern = re.compile(rf'\s+{attr}=["\'][^"\']*["\']', re.IGNORECASE)
                 xml = pattern.sub('', xml)
-                
-        # Step 2: Inject the requested EMA ePI standard styling attributes into ANY <table> element
-        # <table border="1" style="border-collapse: collapse; width: 100%;">
+
+        # Step 2: Inject CSS borders on <table>, <td>, and <th> elements.
+        # The deprecated HTML border="1" attribute is kept as a fallback but
+        # explicit CSS borders are required for strict XHTML/FHIR renderers.
         table_pat = re.compile(r'<table\b([^>]*)>', re.IGNORECASE)
         original_count = len(table_pat.findall(xml))
-        
+
         if original_count > 0:
             def table_repl(match):
                 attrs = match.group(1) or ' '
-                # Clear any existing variants so we can uniformly apply the correct ones
                 attrs = re.sub(r'\bborder=["\'][^"\']*["\']', '', attrs, flags=re.IGNORECASE)
                 attrs = re.sub(r'\bstyle=["\'][^"\']*["\']', '', attrs, flags=re.IGNORECASE)
                 attrs = re.sub(r'\bwidth=["\'][^"\']*["\']', '', attrs, flags=re.IGNORECASE)
-                return f'<table {attrs.strip()} border="1" style="border-collapse: collapse; width: 100%;">'
-                
+                return f'<table {attrs.strip()} border="1" style="{self._TABLE_STYLE}">'
+
+            def cell_repl(match):
+                tag = match.group(1)
+                existing = match.group(2) or ''
+                existing = re.sub(r'\bstyle=["\'][^"\']*["\']', '', existing, flags=re.IGNORECASE)
+                return f'<{tag} {existing.strip()} style="{self._CELL_BORDER_STYLE}">'.replace('  ', ' ')
+
             new_xml = table_pat.sub(table_repl, xml)
-            
+            new_xml = re.sub(r'<(td|th)\b([^>]*)>', cell_repl, new_xml, flags=re.IGNORECASE)
+
             if new_xml != xml:
                 fixes.append(FixAction(
                     rule="UI_FORMAT_TABLE_BORDERS",
                     location="table elements",
-                    description=f"Injected standard EMA visual styling (border=1, fluid-width) across {original_count} tables"
+                    description=f"Injected CSS border styling on tables and cells across {original_count} tables"
                 ))
             return new_xml, fixes
-            
+
         return xml, fixes
 
     def _fix_qrd_subheaders(self, xml: str, issues: List[ValidationIssue]) -> Tuple[str, List[FixAction]]:
