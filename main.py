@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import re
 import json
 import shutil
 import logging
@@ -114,7 +115,6 @@ def process_stateless(file: UploadFile = File(...)):
             validation_report_md = val_log.to_markdown()
 
             # 4. Diff comparison: source text vs validated XML
-            import re
             source_parts = []
             for s in sections:
                 # Skip _preface — it is embedded in Composition.text, not a numbered section
@@ -132,24 +132,39 @@ def process_stateless(file: UploadFile = File(...)):
             source_text = " ".join(source_parts)
             
             try:
-                import re
-                # Strip standard ePI boilerplate that artificially reduces fidelity.
-                # Non-greedy, anchored to avoid accidentally consuming real content.
-                cleaned_xml = re.sub(
-                    r'electronic Product Information \(ePI\) Composition',
-                    '', fixed_xml, flags=re.IGNORECASE
-                )
-                # Strip any residual synthetic Section X headers (e.g. <h2>Section 4</h2>)
-                cleaned_xml = re.sub(r'<h2>Section \d+\.?</h2>', '', cleaned_xml, flags=re.IGNORECASE)
+                # --- Fidelity score: recall-based, section-narrative-only ---
+                #
+                # metric: recall = matched_words / source_words
+                #   • ratio() = 2M/(S+T) penalises the FHIR structural overhead
+                #     (Composition.text metadata, extra <h2> parents) even when every
+                #     source word is faithfully present in the XML.  recall = M/S does not.
+                #
+                # target: section narratives only (Composition.text metadata excluded)
+                #   • The Composition.text.div contains synthetically generated metadata
+                #     ("Product Name: ...", "Document Type: SmPC", preface text) — words
+                #     in target but not in source — inflating T and suppressing ratio().
+                #   • extract_section_narratives() removes that first <text> block so only
+                #     the actual SmPC section content is scored.
+                #
+                # autojunk=False: avoids SequenceMatcher silently skipping common medical
+                #   phrases that appear in >1% of the word sequence.
+                #
+                # These are scoring-only changes.  The FHIR XML is unchanged.
 
-                # Strip all XML/HTML tags for fidelity score — compare plain text only
-                # We revert this back to False to prevent raw FHIR XML tags from appearing as 'massive changes' in the diff tool
+                section_target = diff_engine.extract_section_narratives(fixed_xml)
                 s_clean = diff_engine.clean_for_diff(source_text, preserve_formatting=False)
-                t_clean = diff_engine.clean_for_diff(cleaned_xml, preserve_formatting=False)
-                matcher = difflib.SequenceMatcher(None, s_clean.split(), t_clean.split())
-                fidelity_score = round(matcher.ratio() * 100, 1)
-                
-                # Visual diff still uses formatting for a WYSIWYG view
+                t_clean = diff_engine.clean_for_diff(section_target, preserve_formatting=False)
+
+                s_words = s_clean.split()
+                t_words = t_clean.split()
+                if s_words and t_words:
+                    matcher = difflib.SequenceMatcher(None, s_words, t_words, autojunk=False)
+                    matched = sum(block.size for block in matcher.get_matching_blocks())
+                    fidelity_score = round(min(100.0, (matched / len(s_words)) * 100), 1)
+                else:
+                    fidelity_score = 0.0
+
+                # Visual diff uses the full XML for a complete WYSIWYG review
                 diff_html = diff_engine.generate_html_diff(source_text, fixed_xml)
             except Exception:
                 fidelity_score = 0.0

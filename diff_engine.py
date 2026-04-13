@@ -153,5 +153,24 @@ def generate_html_diff(source_text: str, target_xml_content: str) -> str:
             
     return " ".join(html_output)
 
+def extract_section_narratives(xml_str: str) -> str:
+    """
+    Extracts only the FHIR section narrative content from a Composition XML for fidelity scoring.
+
+    The Composition.text element (the first <text> block) contains synthetically generated
+    metadata — "Product Name: ...", "Document Type: SmPC", preface text — none of which
+    came from the source document.  Including it in the fidelity comparison inflates the
+    target word count and suppresses the score even when every source word is present.
+
+    This function removes that first <text>…</text> block and returns the remainder,
+    which contains only the <section> narrative divs (the actual SmPC content).
+
+    This is a pure extraction for scoring — the FHIR XML on disk is unchanged.
+    Fully FHIR-compliant: the Composition structure and all profiles are preserved.
+    """
+    return re.sub(r'<text\b[^>]*>.*?</text>', '', xml_str,
+                  count=1, flags=re.DOTALL | re.IGNORECASE)
+
+
 def extract_content_from_xml(xml_str: str) -> str:
     return xml_str # Allow cleaning logic to handle it
