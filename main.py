@@ -67,12 +67,23 @@ def process_stateless(file: UploadFile = File(...)):
             comp = mapper.create_doc_composition(doc_obj, "urn:uuid:med-prod", "urn:uuid:org")
             original_xml = mapper.resource_to_xml(comp)
 
-            # Build source_text for fidelity scoring (skip _preface — it lives in
-            # Composition.text metadata, not in a numbered section)
+            # Build source_text for fidelity scoring.
+            # Rules:
+            #   1. Skip _preface — lives in Composition.text metadata, not a numbered section
+            #   2. Skip non-SmPC section IDs (labelling, annex variants) — not mapped to FHIR sections
+            #   3. Skip duplicate section IDs — prevent word-count inflation from repeated IDs
+            _NON_SMPC_IDS = {'labelling', 'annex_i', 'annex_ii', 'annex_iii'}
             source_parts = []
+            seen_ids: set = set()
             for s in sections:
-                if s.get('section_id') == '_preface':
+                sid = s.get('section_id', '')
+                if sid == '_preface':
                     continue
+                if sid in _NON_SMPC_IDS:
+                    continue
+                if sid in seen_ids:
+                    continue
+                seen_ids.add(sid)
                 title = s.get('title', '').strip()
                 text  = s.get('text',  '').strip()
                 text_no_tags = re.sub(r'^\s*(<[^>]+>)+\s*', '', text)
