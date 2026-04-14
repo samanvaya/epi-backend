@@ -1,3 +1,12 @@
+"""FHIR R4 mapping for ePI documents.
+
+Key reference — HL7 ePI Tech Style Guide (Implementation Rules & Best Practices):
+https://build.fhir.org/ig/HL7/emedicinal-product-info/en/tech-style-guide.html
+
+Narrative XHTML rules (bold/italic, alignment, tables, lists, etc.) must
+follow that guide. Check it monthly for updates.
+"""
+
 from typing import List, Dict, Any, Union
 import datetime
 import uuid
