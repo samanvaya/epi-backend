@@ -57,6 +57,22 @@ def process_stateless(file: UploadFile = File(...)):
 
             doc_type = parser.DocumentFactory.detect_type(raw_html)
 
+            # Reject non-SmPC uploads: require at least two canonical SmPC top-level
+            # section IDs (1-6 or well-known subsections) before running the pipeline.
+            # Prevents meaningless 100% fidelity scores on documents that lack SmPC structure.
+            _SMPC_ANCHOR_IDS = {"1", "2", "3", "4", "4.1", "4.2", "4.3", "4.4", "4.8", "5", "6", "6.1"}
+            found_anchors = {s.get("section_id", "") for s in sections} & _SMPC_ANCHOR_IDS
+            if len(found_anchors) < 2:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Uploaded document does not appear to be an SmPC. "
+                        f"Detected {len(found_anchors)} SmPC section anchor(s); need at least 2. "
+                        f"Expected sections like '1. Name of the medicinal product', "
+                        f"'4.1 Therapeutic indications', '4.8 Undesirable effects', etc."
+                    ),
+                )
+
             doc_obj = {
                 "filename": file.filename,
                 "type": doc_type,
@@ -185,8 +201,12 @@ def process_stateless(file: UploadFile = File(...)):
                 "validation_log_json": json.dumps(val_log_data, indent=2),
                 "validation_report_md": validation_report_md,
 
-                # Diff comparison
-                "fidelity_score": fidelity_score,
+                # Diff comparison.
+                # Only surface the fidelity score when the XML is structurally
+                # valid — otherwise the recall-based metric misleads users into
+                # thinking an invalid document was processed successfully.
+                "fidelity_score": fidelity_score if error_count == 0 else None,
+                "fidelity_status": "available" if error_count == 0 else "suppressed_due_to_errors",
                 "diff_html": diff_html,
 
                 # Bundle
@@ -199,6 +219,8 @@ def process_stateless(file: UploadFile = File(...)):
                 "sections_count": len(sections),
             }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Stateless pipeline failed")
         raise HTTPException(status_code=500, detail=str(e))
