@@ -28,6 +28,19 @@ COPY fhir_mapper.py .
 COPY fhir_validator.py .
 COPY diff_engine.py .
 COPY repair_engine.py .
+# P1-PUB-1..4: opt-in publication / QR / render path. Inert until
+# `publish: true` is sent on a request and the tenant is on
+# PUBLICATION_TENANTS_ALLOWLIST. See CHANGELOG / FEATURE_SPEC §5.
+COPY publication_service.py .
+COPY qr_generator.py .
+# Canonical 11pt Times New Roman stylesheet referenced by the
+# `css_href` response field and the new render endpoint. (Was previously
+# missing from the image; live prod returned 404 on /static/epi-standard.css.)
+COPY static/ ./static/
+# Runtime location for the v1-demo SQLite publication store. The dir is
+# pre-created so the first publish call does not fail on a write to a
+# non-existent directory. The DB itself is created on first use.
+RUN mkdir -p /app/data
 
 EXPOSE 8000
 
