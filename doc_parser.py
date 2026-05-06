@@ -7,6 +7,132 @@ import os
 import html
 import base64
 
+# --- Static Styling Contract ---
+#
+# All ePI output is rendered as 11pt Times New Roman via the global
+# epi-standard.css stylesheet. The parser must NEVER pass through inline
+# font-family, font-size, or color declarations from the source DOCX.
+#
+# The only `style` properties allowed to survive sanitization are layout
+# primitives that carry real semantic meaning: text alignment (for
+# paragraphs the author explicitly centered/right-aligned) and table
+# geometry (borders, padding, width, border-collapse).
+#
+# Reference: HL7 ePI Tech Style Guide
+# https://build.fhir.org/ig/HL7/emedicinal-product-info/en/tech-style-guide.html
+
+_ALLOWED_STYLE_PROPS = {
+    'text-align',
+    'border', 'border-collapse', 'border-color', 'border-style',
+    'border-width', 'border-top', 'border-right', 'border-bottom', 'border-left',
+    'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+    'width',
+    'vertical-align',
+}
+
+_ALLOWED_TEXT_ALIGN_VALUES = {'center', 'right', 'justify'}
+
+_ALLOWED_CLASS_NAMES = {'epi-annex-title', 'epi-narrative'}
+
+_STRIPPED_PRESENTATION_ATTRS = ['face', 'color', 'size', 'bgcolor', 'align', 'valign']
+
+
+def _sanitize_style_attr(style_value: str) -> str:
+    """Return a re-composed style string containing ONLY whitelisted properties."""
+    out = []
+    for decl in style_value.split(';'):
+        if ':' not in decl:
+            continue
+        prop, _, val = decl.partition(':')
+        prop = prop.strip().lower()
+        val = val.strip()
+        if prop not in _ALLOWED_STYLE_PROPS:
+            continue
+        if prop == 'text-align' and val.lower() not in _ALLOWED_TEXT_ALIGN_VALUES:
+            continue
+        out.append(f"{prop}: {val}")
+    return "; ".join(out)
+
+
+def _sanitize_html_styles(html_str: str) -> str:
+    """Strip inline fonts/colors/classes from HTML — keep only allowed layout styles.
+
+    Aggressive by design: the document must render uniformly under the global
+    11pt Times New Roman stylesheet. Any DOCX-derived font metadata is dropped.
+    """
+    if not html_str:
+        return html_str
+
+    # 1. Unwrap <font> tags (keep their contents, drop the tag and all its attrs).
+    html_str = re.sub(r'<font\b[^>]*>', '', html_str, flags=re.IGNORECASE)
+    html_str = re.sub(r'</font>', '', html_str, flags=re.IGNORECASE)
+
+    # 2. Drop deprecated presentation attributes wherever they appear.
+    for attr in _STRIPPED_PRESENTATION_ATTRS:
+        html_str = re.sub(
+            rf'\s+{attr}\s*=\s*"[^"]*"', '', html_str, flags=re.IGNORECASE
+        )
+        html_str = re.sub(
+            rf"\s+{attr}\s*=\s*'[^']*'", '', html_str, flags=re.IGNORECASE
+        )
+
+    # 3. Rewrite every style="..." attribute through the whitelist.
+    def _style_repl(m):
+        sanitized = _sanitize_style_attr(m.group(1))
+        return f'style="{sanitized}"' if sanitized else ''
+    html_str = re.sub(
+        r'style\s*=\s*"([^"]*)"', _style_repl, html_str, flags=re.IGNORECASE
+    )
+    html_str = re.sub(
+        r"style\s*=\s*'([^']*)'", _style_repl, html_str, flags=re.IGNORECASE
+    )
+
+    # 4. Strip class attributes that aren't in the allowed set.
+    def _class_repl(m):
+        classes = [c for c in m.group(1).split() if c in _ALLOWED_CLASS_NAMES]
+        return f'class="{" ".join(classes)}"' if classes else ''
+    html_str = re.sub(
+        r'class\s*=\s*"([^"]*)"', _class_repl, html_str, flags=re.IGNORECASE
+    )
+    html_str = re.sub(
+        r"class\s*=\s*'([^']*)'", _class_repl, html_str, flags=re.IGNORECASE
+    )
+
+    # 5. Collapse dangling whitespace from stripped attributes.
+    html_str = re.sub(r'\s{2,}(?=[>\s])', ' ', html_str)
+    html_str = re.sub(r'<(\w+)\s+>', r'<\1>', html_str)
+
+    return html_str
+
+
+_ANNEX_LINE_RE = re.compile(
+    r'^\s*ANNEX\s+[IVX]+\s*$',
+    re.IGNORECASE,
+)
+
+
+def _elevate_annex_headers(html_str: str) -> str:
+    """Wrap bare 'ANNEX I/II/III' lines in <h1 class="epi-annex-title">.
+
+    Targets the text inside <p> elements whose visible content, stripped of
+    tags, is exactly an annex roman-numeral marker. Idempotent — already
+    elevated headings are left untouched.
+    """
+    if not html_str:
+        return html_str
+
+    def _p_repl(m):
+        inner = m.group(1)
+        visible = re.sub(r'<[^>]+>', '', inner).strip()
+        if _ANNEX_LINE_RE.match(visible):
+            return f'<h1 class="epi-annex-title">{visible.upper()}</h1>'
+        return m.group(0)
+
+    return re.sub(
+        r'<p\b[^>]*>(.*?)</p>', _p_repl, html_str,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+
 # --- Constants & Regex Definitions ---
 
 SMPC_HEADERS = {
@@ -67,7 +193,8 @@ def read_pdf(file_path: str) -> str:
             extract = page.extract_text()
             if extract:
                 text += extract + "\n"
-        return html.escape(text).replace("\n", "<br/>")
+        escaped = html.escape(text).replace("\n", "<br/>")
+        return _elevate_annex_headers(_sanitize_html_styles(escaped))
     except Exception as e:
         raise ValueError(f"Error reading PDF: {e}")
 
@@ -96,12 +223,18 @@ def read_docx(file_path: str) -> str:
             """
             
             result = mammoth.convert_to_html(
-                docx_file, 
+                docx_file,
                 style_map=style_map,
                 convert_image=mammoth.images.img_element(convert_image)
             )
-            return result.value
-            
+            html_out = result.value
+
+            # Enforce the static-styling contract: strip DOCX font metadata
+            # and elevate bare "ANNEX I/II/III" paragraphs to semantic h1s.
+            html_out = _sanitize_html_styles(html_out)
+            html_out = _elevate_annex_headers(html_out)
+            return html_out
+
     except Exception as e:
         print(f"Mammoth conversion failed: {e}")
         raise e

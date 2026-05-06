@@ -1,0 +1,128 @@
+{
+  "resourceType": "ValueSet",
+  "status": "active",
+  "name": "EUepilabellingcodesVs",
+  "id": "EUepilabellingcodesVs",
+  "title": "04 Labelling Code Value Set",
+  "version": "1.0.0",
+  "url": "http://ema.europa.eu/fhir/ValueSet/EUepilabellingcodesVs",
+  "experimental": false,
+  "publisher": "European Medicines Agency",
+  "jurisdiction": [
+    {
+      "text": "European Union"
+    }
+  ],
+  "description": "List of section codes allowed in Labelling documents, defined in EMA's Referentials Management Service.",
+  "compose": {
+    "include": [
+      {
+        "system": "http://ema.europa.eu/fhir/CodeSystem/200000029659",
+        "concept": [
+          {
+            "code": "000000000000"
+          },
+          {
+            "code": "200000029861"
+          },
+          {
+            "code": "200000029862"
+          },
+          {
+            "code": "200000029863"
+          },
+          {
+            "code": "200000029864"
+          },
+          {
+            "code": "200000029865"
+          },
+          {
+            "code": "200000029866"
+          },
+          {
+            "code": "200000029867"
+          },
+          {
+            "code": "200000029868"
+          },
+          {
+            "code": "200000029869"
+          },
+          {
+            "code": "200000029870"
+          },
+          {
+            "code": "200000029871"
+          },
+          {
+            "code": "200000029872"
+          },
+          {
+            "code": "200000029873"
+          },
+          {
+            "code": "200000029874"
+          },
+          {
+            "code": "200000029875"
+          },
+          {
+            "code": "200000029876"
+          },
+          {
+            "code": "200000029877"
+          },
+          {
+            "code": "200000029878"
+          },
+          {
+            "code": "200000029879"
+          },
+          {
+            "code": "200000029880"
+          },
+          {
+            "code": "200000029881"
+          },
+          {
+            "code": "200000029882"
+          },
+          {
+            "code": "200000029883"
+          },
+          {
+            "code": "200000029884"
+          },
+          {
+            "code": "200000029885"
+          },
+          {
+            "code": "200000029886"
+          },
+          {
+            "code": "200000029887"
+          },
+          {
+            "code": "200000029888"
+          },
+          {
+            "code": "200000029889"
+          },
+          {
+            "code": "200000029890"
+          },
+          {
+            "code": "200000029891"
+          },
+          {
+            "code": "200000029892"
+          },
+          {
+            "code": "200000029893"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import os
 import re
 import json
@@ -30,6 +31,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve the canonical ePI stylesheet. The FHIR XHTML narrative contains NO
+# inline font declarations — typography is supplied entirely by this CSS.
+_STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+if os.path.isdir(_STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+CSS_HREF = "/static/epi-standard.css"
 
 
 @app.post("/api/process_stateless")
@@ -217,6 +225,11 @@ def process_stateless(file: UploadFile = File(...)):
                 "source_text": source_text[:2000],
                 "doc_type": doc_type,
                 "sections_count": len(sections),
+
+                # Static stylesheet contract — frontend/viewer should apply
+                # this CSS to the XHTML narrative. The narrative itself
+                # contains no inline font declarations.
+                "css_href": CSS_HREF,
             }
 
     except HTTPException:

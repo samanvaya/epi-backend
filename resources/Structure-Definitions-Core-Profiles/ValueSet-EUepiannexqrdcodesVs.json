@@ -1,0 +1,62 @@
+{
+  "resourceType": "ValueSet",
+  "status": "active",
+  "name": "EUepiannexqrdcodesVs",
+  "id": "EUepiannexqrdcodesVs",
+  "title": "03 Annex II Code Value Set",
+  "version": "1.0.0",
+  "url": "http://ema.europa.eu/fhir/ValueSet/EUepiannexqrdcodesVs",
+  "experimental": false,
+  "publisher": "European Medicines Agency",
+  "jurisdiction": [
+    {
+      "text": "European Union"
+    }
+  ],
+  "description": "List of section codes allowed in Annex II documents, defined in EMA's Referentials Management Service.",
+  "compose": {
+    "include": [
+      {
+        "system": "http://ema.europa.eu/fhir/CodeSystem/200000029659",
+        "concept": [
+          {
+            "code": "000000000000"
+          },
+          {
+            "code": "200000029850"
+          },
+          {
+            "code": "200000029851"
+          },
+          {
+            "code": "200000029852"
+          },
+          {
+            "code": "200000029853"
+          },
+          {
+            "code": "200000029854"
+          },
+          {
+            "code": "200000029855"
+          },
+          {
+            "code": "200000029856"
+          },
+          {
+            "code": "200000029857"
+          },
+          {
+            "code": "200000029858"
+          },
+          {
+            "code": "200000029859"
+          },
+          {
+            "code": "200000029860"
+          }
+        ]
+      }
+    ]
+  }
+}

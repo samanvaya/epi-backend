@@ -1,0 +1,116 @@
+{
+  "resourceType": "ValueSet",
+  "status": "active",
+  "name": "EUepiplqrdcodesVs",
+  "id": "EUepiplqrdcodesVs",
+  "title": "05 PL Code Value Set",
+  "version": "1.0.0",
+  "url": "http://ema.europa.eu/fhir/ValueSet/EUepiplqrdcodesVs",
+  "experimental": false,
+  "publisher": "European Medicines Agency",
+  "jurisdiction": [
+    {
+      "text": "European Union"
+    }
+  ],
+  "description": "List of section codes allowed in Package Leaflet documents, defined in EMA's Referentials Management Service.",
+  "compose": {
+    "include": [
+      {
+        "system": "http://ema.europa.eu/fhir/CodeSystem/200000029659",
+        "concept": [
+          {
+            "code": "000000000000"
+          },
+          {
+            "code": "200000029894"
+          },
+          {
+            "code": "200000029895"
+          },
+          {
+            "code": "200000029896"
+          },
+          {
+            "code": "200000029897"
+          },
+          {
+            "code": "200000029898"
+          },
+          {
+            "code": "200000029899"
+          },
+          {
+            "code": "200000029900"
+          },
+          {
+            "code": "200000029901"
+          },
+          {
+            "code": "200000029902"
+          },
+          {
+            "code": "200000029903"
+          },
+          {
+            "code": "200000029904"
+          },
+          {
+            "code": "200000029905"
+          },
+          {
+            "code": "200000029906"
+          },
+          {
+            "code": "200000029907"
+          },
+          {
+            "code": "200000029908"
+          },
+          {
+            "code": "200000029909"
+          },
+          {
+            "code": "200000029910"
+          },
+          {
+            "code": "200000029911"
+          },
+          {
+            "code": "200000029912"
+          },
+          {
+            "code": "200000029913"
+          },
+          {
+            "code": "200000029914"
+          },
+          {
+            "code": "200000029915"
+          },
+          {
+            "code": "200000029916"
+          },
+          {
+            "code": "200000029917"
+          },
+          {
+            "code": "200000029918"
+          },
+          {
+            "code": "200000029919"
+          },
+          {
+            "code": "200000029920"
+          },
+          {
+            "code": "200000029921"
+          },
+          {
+            "code": "200000044346"
+          }
+        ]
+      }
+    ]
+  }
+}

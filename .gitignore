@@ -3,3 +3,4 @@ validator_cli.jar
 .fhir_tmp/
 __pycache__/
 *.pyc
+.DS_Store

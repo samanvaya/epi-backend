@@ -1,0 +1,24 @@
+{
+  "resourceType": "ValueSet",
+  "status": "active",
+  "name": "EUepidocumenttypesVs",
+  "id": "EUepidocumenttypesVs",
+  "title": "01 Document Type Value Set",
+  "version": "1.0.0",
+  "url": "http://ema.europa.eu/fhir/ValueSet/EUepidocumenttypesVs",
+  "experimental": false,
+  "publisher": "European Medicines Agency",
+  "jurisdiction": [
+    {
+      "text": "European Union"
+    }
+  ],
+  "description": "EU EPI document type value set, defined in EMA's Referentials Management Service.",
+  "compose": {
+    "include": [
+      {
+        "system": "http://ema.europa.eu/fhir/CodeSystem/100000155531"
+      }
+    ]
+  }
+}

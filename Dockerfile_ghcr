@@ -1,0 +1,1 @@
+FROM ghcr.io/samanvaya/epi-backend:hf-latest

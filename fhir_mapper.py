@@ -151,10 +151,20 @@ def create_section(data: Dict[str, str]) -> CompositionSection:
             return f'<{tag} {existing.strip()} style="{_CELL_BORDER_STYLE}">'.replace('  ', ' ')
         clean_text = re.sub(r'<(td|th)\b([^>]*)>', _add_cell_borders, clean_text, flags=re.IGNORECASE)
 
+        # SEMANTIC ELEVATION: Annex sections render the title as <h1
+        # class="epi-annex-title">; all other SmPC sections use <h2>. Because
+        # the stylesheet locks typography to 11pt Times New Roman, the visual
+        # hierarchy comes from tag + class semantics, not font size.
+        _ANNEX_SECTION_IDS = {'annex_i', 'annex_ii', 'annex_iii', 'labelling'}
+        if sec_id in _ANNEX_SECTION_IDS:
+            title_html = f'<h1 class="epi-annex-title">{clean_title}</h1>'
+        else:
+            title_html = f'<h2>{clean_title}</h2>'
+
         div = (
+        f'<div xmlns="http://www.w3.org/1999/xhtml" class="epi-narrative">'
         f'<div xmlns="http://www.w3.org/1999/xhtml">'
-        f'<div xmlns="http://www.w3.org/1999/xhtml">'
-        f'<h2>{clean_title}</h2>'
+        f'{title_html}'
         f'{clean_text}'
         f'</div></div>'
         )
@@ -162,10 +172,16 @@ def create_section(data: Dict[str, str]) -> CompositionSection:
         # Plain text (PDF source likely) - escape and line breaks
         clean_text = html.escape(text_content or "").replace(chr(10), "<br/>")
 
+        _ANNEX_SECTION_IDS = {'annex_i', 'annex_ii', 'annex_iii', 'labelling'}
+        if sec_id in _ANNEX_SECTION_IDS:
+            title_html = f'<h1 class="epi-annex-title">{clean_title}</h1>'
+        else:
+            title_html = f'<h2>{clean_title}</h2>'
+
         div = (
+        f'<div xmlns="http://www.w3.org/1999/xhtml" class="epi-narrative">'
         f'<div xmlns="http://www.w3.org/1999/xhtml">'
-        f'<div xmlns="http://www.w3.org/1999/xhtml">'
-        f'<h2>{clean_title}</h2>'
+        f'{title_html}'
         f'<p>{clean_text}</p>' # Wrap plain text in p
         f'</div></div>'
         )

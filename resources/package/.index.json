@@ -1,0 +1,352 @@
+{
+  "index-version" : 2,
+  "files" : [
+    {
+      "filename" : "ImplementationGuide-EUePI.json",
+      "resourceType" : "ImplementationGuide",
+      "id" : "EUePI",
+      "url" : "http://ema.europa.eu/fhir/ImplementationGuide/EUePI",
+      "version" : "1.0.0"
+    },
+    {
+      "filename" : "CodeSystem-100000000004.json",
+      "resourceType" : "CodeSystem",
+      "id" : "100000000004",
+      "url" : "http://ema.europa.eu/fhir/CodeSystem/100000000004",
+      "version" : "1.0.0",
+      "content" : "complete"
+    },
+    {
+      "filename" : "CodeSystem-100000155531.json",
+      "resourceType" : "CodeSystem",
+      "id" : "100000155531",
+      "url" : "http://ema.europa.eu/fhir/CodeSystem/100000155531",
+      "version" : "1.0.0",
+      "content" : "complete"
+    },
+    {
+      "filename" : "CodeSystem-200000029659.json",
+      "resourceType" : "CodeSystem",
+      "id" : "200000029659",
+      "url" : "http://ema.europa.eu/fhir/CodeSystem/200000029659",
+      "version" : "1.0.0",
+      "content" : "complete"
+    },
+    {
+      "filename" : "StructureDefinition-EUEpiBundle.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUEpiBundle",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUEpiBundle",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Bundle",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUEpiComposition.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUEpiComposition",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUEpiComposition",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUEpiCompositionAnnexII.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUEpiCompositionAnnexII",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUEpiCompositionAnnexII",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUEpiCompositionCAP.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUEpiCompositionCAP",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUEpiCompositionCAP",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUEpiCompositionLabeling.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUEpiCompositionLabeling",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUEpiCompositionLabeling",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUEpiCompositionNAPMRPDCP.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUEpiCompositionNAPMRPDCP",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUEpiCompositionNAPMRPDCP",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUEpiCompositionPackageLeaflet.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUEpiCompositionPackageLeaflet",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUEpiCompositionPackageLeaflet",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUEpiCompositionSmPC.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUEpiCompositionSmPC",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUEpiCompositionSmPC",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUEpiList.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUEpiList",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUEpiList",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "List",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUQRD-CAP-template-new-Annex-II-en.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUQRD-CAP-template-new-Annex-II-en",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUQRD-CAP-template-new-Annex-II-en",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUQRD-CAP-template-new-Labeling-en.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUQRD-CAP-template-new-Labeling-en",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUQRD-CAP-template-new-Labeling-en",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUQRD-CAP-template-new-Package-Leaflet-en.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUQRD-CAP-template-new-Package-Leaflet-en",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUQRD-CAP-template-new-Package-Leaflet-en",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUQRD-CAP-template-new-SmPC-en.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUQRD-CAP-template-new-SmPC-en",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUQRD-CAP-template-new-SmPC-en",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUQRD-NAP-template-new-Common-Labeling-en.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUQRD-NAP-template-new-Common-Labeling-en",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUQRD-NAP-template-new-Common-Labeling-en",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUQRD-NAP-template-new-Common-Package-Leaflet-en.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUQRD-NAP-template-new-Common-Package-Leaflet-en",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUQRD-NAP-template-new-Common-Package-Leaflet-en",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-EUQRD-NAP-template-new-Common-SmPC-en.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "EUQRD-NAP-template-new-Common-SmPC-en",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/EUQRD-NAP-template-new-Common-SmPC-en",
+      "version" : "1.0.0",
+      "kind" : "resource",
+      "type" : "Composition",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-ext-epi-authorization-type.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "ext-epi-authorization-type",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/ext-epi-authorization-type",
+      "version" : "1.0.0",
+      "kind" : "complex-type",
+      "type" : "Extension",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-ext-epi-image-reference.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "ext-epi-image-reference",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/ext-epi-image-reference",
+      "version" : "1.0.0",
+      "kind" : "complex-type",
+      "type" : "Extension",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-ext-epi-marketing-authorisation-holder-display.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "ext-epi-marketing-authorisation-holder-display",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/ext-epi-marketing-authorisation-holder-display",
+      "version" : "1.0.0",
+      "kind" : "complex-type",
+      "type" : "Extension",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-ext-epi-marketing-authorisation-holder.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "ext-epi-marketing-authorisation-holder",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/ext-epi-marketing-authorisation-holder",
+      "version" : "1.0.0",
+      "kind" : "complex-type",
+      "type" : "Extension",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-ext-epi-medicine-domain.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "ext-epi-medicine-domain",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/ext-epi-medicine-domain",
+      "version" : "1.0.0",
+      "kind" : "complex-type",
+      "type" : "Extension",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-ext-epi-procedure-number.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "ext-epi-procedure-number",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/ext-epi-procedure-number",
+      "version" : "1.0.0",
+      "kind" : "complex-type",
+      "type" : "Extension",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-ext-epi-qrdtemplate-version.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "ext-epi-qrdtemplate-version",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/ext-epi-qrdtemplate-version",
+      "version" : "1.0.0",
+      "kind" : "complex-type",
+      "type" : "Extension",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-ext-epi-regulatory-agency-display.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "ext-epi-regulatory-agency-display",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/ext-epi-regulatory-agency-display",
+      "version" : "1.0.0",
+      "kind" : "complex-type",
+      "type" : "Extension",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-ext-epi-regulatory-agency.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "ext-epi-regulatory-agency",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/ext-epi-regulatory-agency",
+      "version" : "1.0.0",
+      "kind" : "complex-type",
+      "type" : "Extension",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "StructureDefinition-ext-epi-version-number.json",
+      "resourceType" : "StructureDefinition",
+      "id" : "ext-epi-version-number",
+      "url" : "http://ema.europa.eu/fhir/StructureDefinition/ext-epi-version-number",
+      "version" : "1.0.0",
+      "kind" : "complex-type",
+      "type" : "Extension",
+      "derivation" : "constraint"
+    },
+    {
+      "filename" : "ValueSet-EUepiannexqrdcodesVs.json",
+      "resourceType" : "ValueSet",
+      "id" : "EUepiannexqrdcodesVs",
+      "url" : "http://ema.europa.eu/fhir/ValueSet/EUepiannexqrdcodesVs",
+      "version" : "1.0.0"
+    },
+    {
+      "filename" : "ValueSet-EUepicapqrdcodesVs.json",
+      "resourceType" : "ValueSet",
+      "id" : "EUepicapqrdcodesVs",
+      "url" : "http://ema.europa.eu/fhir/ValueSet/EUepicapqrdcodesVs",
+      "version" : "1.0.0"
+    },
+    {
+      "filename" : "ValueSet-EUepidocumenttypesVs.json",
+      "resourceType" : "ValueSet",
+      "id" : "EUepidocumenttypesVs",
+      "url" : "http://ema.europa.eu/fhir/ValueSet/EUepidocumenttypesVs",
+      "version" : "1.0.0"
+    },
+    {
+      "filename" : "ValueSet-EUepilabellingcodesVs.json",
+      "resourceType" : "ValueSet",
+      "id" : "EUepilabellingcodesVs",
+      "url" : "http://ema.europa.eu/fhir/ValueSet/EUepilabellingcodesVs",
+      "version" : "1.0.0"
+    },
+    {
+      "filename" : "ValueSet-EUepimedicinedomainVs.json",
+      "resourceType" : "ValueSet",
+      "id" : "EUepimedicinedomainVs",
+      "url" : "http://ema.europa.eu/fhir/ValueSet/EUepimedicinedomainVs",
+      "version" : "1.0.0"
+    },
+    {
+      "filename" : "ValueSet-EUepinapmrpdcpqrdcodesVs.json",
+      "resourceType" : "ValueSet",
+      "id" : "EUepinapmrpdcpqrdcodesVs",
+      "url" : "http://ema.europa.eu/fhir/ValueSet/EUepinapmrpdcpqrdcodesVs",
+      "version" : "1.0.0"
+    },
+    {
+      "filename" : "ValueSet-EUepiplqrdcodesVs.json",
+      "resourceType" : "ValueSet",
+      "id" : "EUepiplqrdcodesVs",
+      "url" : "http://ema.europa.eu/fhir/ValueSet/EUepiplqrdcodesVs",
+      "version" : "1.0.0"
+    },
+    {
+      "filename" : "ValueSet-EUepismpcqrdcodesVs.json",
+      "resourceType" : "ValueSet",
+      "id" : "EUepismpcqrdcodesVs",
+      "url" : "http://ema.europa.eu/fhir/ValueSet/EUepismpcqrdcodesVs",
+      "version" : "1.0.0"
+    }
+  ]
+}

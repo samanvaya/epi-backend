@@ -1,0 +1,33 @@
+{
+  "name" : "EUePI",
+  "version" : "1.0.0",
+  "tools-version" : 3,
+  "type" : "IG",
+  "date" : "20250502104858",
+  "license" : "CC0-1.0",
+  "canonical" : "http://ema.europa.eu/fhir",
+  "notForPublication" : true,
+  "url" : "file://C:\\dev\\epi-fhir-profiles\\output",
+  "title" : "European Medicines Regulatory Network (EMRN) Electronic Product Information (ePI) Implementation Guide",
+  "description" : "EMRN Electronic Product Information Implementation Guide (built Fri, May 2, 2025 10:48+0100+01:00)",
+  "fhirVersions" : ["5.0.0"],
+  "dependencies" : {
+    "hl7.terminology.r5" : "6.3.0",
+    "hl7.fhir.uv.extensions.r5" : "5.2.0"
+  },
+  "author" : "European Medicines Agency",
+  "maintainers" : [
+    {
+      "name" : "European Medicines Agency",
+      "url" : "https://ema.europa.eu/fhir"
+    },
+    {
+      "name" : "FHIR at EMA",
+      "url" : "http://ema.europa.eu/fhir"
+    }
+  ],
+  "directories" : {
+    "lib" : "package",
+    "example" : "example"
+  }
+}

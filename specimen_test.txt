@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+python-multipart>=0.0.18
+fhir.resources
+pypdf>=3.17.0
+mammoth>=1.6.0
+httpx>=0.24.0

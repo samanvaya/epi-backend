@@ -1,0 +1,482 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "active",
+  "content": "complete",
+  "name": "EUepirmsdocumenttype",
+  "id": "100000155531",
+  "title": "01 Document Type Code System",
+  "description": "EU EPI document type code system, defined in EMA's Referentials Management Service.",
+  "version": "1.0.0",
+  "url": "http://ema.europa.eu/fhir/CodeSystem/100000155531",
+  "concept": [
+    {
+      "code": "100000155532",
+      "display": "Summary of Product Characteristics",
+      "designation": [
+        {
+          "language": "en",
+          "value": "SUMMARY OF PRODUCT CHARACTERISTICS"
+        },
+        {
+          "language": "bg",
+          "value": "КРАТКА ХАРАКТЕРИСТИКА НА ПРОДУКТА"
+        },
+        {
+          "language": "hr",
+          "value": "SAŽETAK OPISA SVOJSTAVA LIJEKA"
+        },
+        {
+          "language": "cs",
+          "value": "SOUHRN ÚDAJŮ O PŘÍPRAVKU"
+        },
+        {
+          "language": "da",
+          "value": "PRODUKTRESUMÉ"
+        },
+        {
+          "language": "nl",
+          "value": "SAMENVATTING VAN DE PRODUCTKENMERKEN"
+        },
+        {
+          "language": "et",
+          "value": "RAVIMI OMADUSTE KOKKUVÕTE"
+        },
+        {
+          "language": "fi",
+          "value": "VALMISTEYHTEENVETO"
+        },
+        {
+          "language": "fr",
+          "value": "RÉSUMÉ DES CARACTÉRISTIQUES DU PRODUIT"
+        },
+        {
+          "language": "de",
+          "value": "ZUSAMMENFASSUNG DER MERKMALE DES ARZNEIMITTELS"
+        },
+        {
+          "language": "el",
+          "value": "ΠΕΡΙΛΗΨΗ ΤΩΝ ΧΑΡΑΚΤΗΡΙΣΤΙΚΩΝ ΤΟΥ ΠΡΟΪΟΝΤΟΣ"
+        },
+        {
+          "language": "hu",
+          "value": "ALKALMAZÁSI ELŐÍRÁS"
+        },
+        {
+          "language": "is",
+          "value": "SAMANTEKT Á EIGINLEIKUM LYFS"
+        },
+        {
+          "language": "ga",
+          "value": "ACHOIMRE AR SHAINTRÉITHE AN TÁIRGE"
+        },
+        {
+          "language": "it",
+          "value": "RIASSUNTO DELLE CARATTERISTICHE DEL PRODOTTO"
+        },
+        {
+          "language": "lv",
+          "value": "ZĀĻU APRAKSTS"
+        },
+        {
+          "language": "lt",
+          "value": "PREPARATO CHARAKTERISTIKŲ SANTRAUKA"
+        },
+        {
+          "language": "mt",
+          "value": "SOMMARJU TAL-KARATTERISTIĊI TAL-PRODOTT"
+        },
+        {
+          "language": "no",
+          "value": "PREPARATOMTALE"
+        },
+        {
+          "language": "pl",
+          "value": "CHARAKTERYSTYKA PRODUKTU LECZNICZEGO"
+        },
+        {
+          "language": "pt",
+          "value": "RESUMO DAS CARACTERÍSTICAS DO MEDICAMENTO"
+        },
+        {
+          "language": "ro",
+          "value": "REZUMATUL CARACTERISTICILOR PRODUSULUI"
+        },
+        {
+          "language": "sk",
+          "value": "SÚHRN CHARAKTERISTICKÝCH VLASTNOSTÍ LIEKU"
+        },
+        {
+          "language": "sl",
+          "value": "POVZETEK GLAVNIH ZNAČILNOSTI ZDRAVILA"
+        },
+        {
+          "language": "es",
+          "value": "FICHA TÉCNICA O RESUMEN DE LAS CARACTERÍSTICAS DEL PRODUCTO"
+        },
+        {
+          "language": "sv",
+          "value": "PRODUKTRESUMÉ"
+        }
+      ]
+    },
+    {
+      "code": "100000155533",
+      "display": "Annex II",
+      "designation": [
+        {
+          "language": "en",
+          "value": "ANNEX II"
+        },
+        {
+          "language": "bg",
+          "value": "ПРИЛОЖЕНИЕ II"
+        },
+        {
+          "language": "hr",
+          "value": "PRILOG II."
+        },
+        {
+          "language": "cs",
+          "value": "PŘÍLOHA II"
+        },
+        {
+          "language": "da",
+          "value": "BILAG II"
+        },
+        {
+          "language": "nl",
+          "value": "BIJLAGE II"
+        },
+        {
+          "language": "et",
+          "value": "II LISA"
+        },
+        {
+          "language": "fi",
+          "value": "LIITE II"
+        },
+        {
+          "language": "fr",
+          "value": "ANNEXE II"
+        },
+        {
+          "language": "de",
+          "value": "ANHANG II"
+        },
+        {
+          "language": "el",
+          "value": "ΠΑΡΑΡΤΗΜΑ ΙΙ"
+        },
+        {
+          "language": "hu",
+          "value": "II. MELLÉKLET"
+        },
+        {
+          "language": "is",
+          "value": "VIÐAUKI II"
+        },
+        {
+          "language": "ga",
+          "value": "IARSCRÍBHINN II"
+        },
+        {
+          "language": "it",
+          "value": "ALLEGATO II"
+        },
+        {
+          "language": "lv",
+          "value": "II PIELIKUMS"
+        },
+        {
+          "language": "lt",
+          "value": "II PRIEDAS"
+        },
+        {
+          "language": "mt",
+          "value": "ANNESS II"
+        },
+        {
+          "language": "no",
+          "value": "VEDLEGG II"
+        },
+        {
+          "language": "pl",
+          "value": "ANEKS II"
+        },
+        {
+          "language": "pt",
+          "value": "ANEXO II"
+        },
+        {
+          "language": "ro",
+          "value": "ANEXA II"
+        },
+        {
+          "language": "sk",
+          "value": "PRÍLOHA II"
+        },
+        {
+          "language": "sl",
+          "value": "PRILOGA II"
+        },
+        {
+          "language": "es",
+          "value": "ANEXO II"
+        },
+        {
+          "language": "sv",
+          "value": "BILAGA II"
+        }
+      ]
+    },
+    {
+      "code": "100000155534",
+      "display": "Outer Packaging"
+    },
+    {
+      "code": "100000155535",
+      "display": "Labelling",
+      "designation": [
+        {
+          "language": "en",
+          "value": "LABELLING"
+        },
+        {
+          "language": "bg",
+          "value": "ДАННИ ВЪРХУ ОПАКОВКАТА"
+        },
+        {
+          "language": "hr",
+          "value": "OZNAČIVANJE"
+        },
+        {
+          "language": "cs",
+          "value": "OZNAČENÍ NA OBALU"
+        },
+        {
+          "language": "da",
+          "value": "ETIKETTERING"
+        },
+        {
+          "language": "nl",
+          "value": "ETIKETTERING"
+        },
+        {
+          "language": "et",
+          "value": "PAKENDI MÄRGISTUS"
+        },
+        {
+          "language": "fi",
+          "value": "MYYNTIPÄÄLLYSMERKINNÄT"
+        },
+        {
+          "language": "fr",
+          "value": "ÉTIQUETAGE"
+        },
+        {
+          "language": "de",
+          "value": "ETIKETTIERUNG"
+        },
+        {
+          "language": "el",
+          "value": "ΕΠΙΣΗΜΑΝΣΗ"
+        },
+        {
+          "language": "hu",
+          "value": "CÍMKESZÖVEG"
+        },
+        {
+          "language": "is",
+          "value": "ÁLETRANIR"
+        },
+        {
+          "language": "ga",
+          "value": "LIPÉADÚ"
+        },
+        {
+          "language": "it",
+          "value": "ETICHETTATURA"
+        },
+        {
+          "language": "lv",
+          "value": "MARĶĒJUMA TEKSTS"
+        },
+        {
+          "language": "lt",
+          "value": "ŽENKLINIMAS"
+        },
+        {
+          "language": "mt",
+          "value": "TIKKETTAR"
+        },
+        {
+          "language": "no",
+          "value": "MERKING"
+        },
+        {
+          "language": "pl",
+          "value": "OZNAKOWANIE OPAKOWAŃ"
+        },
+        {
+          "language": "pt",
+          "value": "ROTULAGEM"
+        },
+        {
+          "language": "ro",
+          "value": "ETICHETAREA"
+        },
+        {
+          "language": "sk",
+          "value": "OZNAČENIE OBALU"
+        },
+        {
+          "language": "sl",
+          "value": "OZNAČEVANJE"
+        },
+        {
+          "language": "es",
+          "value": "ETIQUETADO"
+        },
+        {
+          "language": "sv",
+          "value": "MÄRKNING"
+        }
+      ]
+    },
+    {
+      "code": "100000155537",
+      "display": "Other Product Information"
+    },
+    {
+      "code": "100000155538",
+      "display": "Package Leaflet",
+      "designation": [
+        {
+          "language": "en",
+          "value": "PACKAGE LEAFLET"
+        },
+        {
+          "language": "bg",
+          "value": "ЛИСТОВКА"
+        },
+        {
+          "language": "hr",
+          "value": "UPUTA O LIJEKU"
+        },
+        {
+          "language": "cs",
+          "value": "PŘÍBALOVÁ INFORMACE"
+        },
+        {
+          "language": "da",
+          "value": "INDLÆGSSEDDEL"
+        },
+        {
+          "language": "nl",
+          "value": "BIJSLUITER"
+        },
+        {
+          "language": "et",
+          "value": "PAKENDI INFOLEHT"
+        },
+        {
+          "language": "fi",
+          "value": "PAKKAUSSELOSTE"
+        },
+        {
+          "language": "fr",
+          "value": "NOTICE"
+        },
+        {
+          "language": "de",
+          "value": "PACKUNGSBEILAGE"
+        },
+        {
+          "language": "el",
+          "value": "ΦΥΛΛΟ ΟΔΗΓΙΩΝ ΧΡΗΣΗΣ"
+        },
+        {
+          "language": "hu",
+          "value": "BETEGTÁJÉKOZTATÓ"
+        },
+        {
+          "language": "is",
+          "value": "FYLGISEÐILL"
+        },
+        {
+          "language": "ga",
+          "value": "BILEOG PHACÁISTE"
+        },
+        {
+          "language": "it",
+          "value": "FOGLIO ILLUSTRATIVO"
+        },
+        {
+          "language": "lv",
+          "value": "LIETOŠANAS INSTRUKCIJA"
+        },
+        {
+          "language": "lt",
+          "value": "PAKUOTĖS LAPELIS"
+        },
+        {
+          "language": "mt",
+          "value": "FULJETT TA TAGĦRIF"
+        },
+        {
+          "language": "no",
+          "value": "PAKNINGSVEDLEGG"
+        },
+        {
+          "language": "pl",
+          "value": "ULOTKA DLA PACJENTA"
+        },
+        {
+          "language": "pt",
+          "value": "FOLHETO INFORMATIVO"
+        },
+        {
+          "language": "ro",
+          "value": "PROSPECTUL"
+        },
+        {
+          "language": "sk",
+          "value": "PÍSOMNÁ INFORMÁCIA PRE POUŽÍVATEĽA"
+        },
+        {
+          "language": "sl",
+          "value": "NAVODILO ZA UPORABO"
+        },
+        {
+          "language": "es",
+          "value": "PROSPECTO"
+        },
+        {
+          "language": "sv",
+          "value": "BIPACKSEDEL"
+        }
+      ]
+    },
+    {
+      "code": "100000155539",
+      "display": "Combined File of all Documents"
+    },
+    {
+      "code": "100000155540",
+      "display": "Mock ups"
+    },
+    {
+      "code": "100000155541",
+      "display": "Appendix V"
+    }
+  ],
+  "experimental": false,
+  "publisher": "European Medicines Agency",
+  "jurisdiction": [
+    {
+      "text": "European Union"
+    }
+  ],
+  "caseSensitive": false,
+  "count": 9
+}

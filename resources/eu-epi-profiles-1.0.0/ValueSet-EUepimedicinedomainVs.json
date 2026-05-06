@@ -1,0 +1,24 @@
+{
+  "resourceType": "ValueSet",
+  "status": "active",
+  "name": "EUepimedicinedomainVs",
+  "id": "EUepimedicinedomainVs",
+  "title": "08 Medicine Domain Value Set",
+  "version": "1.0.0",
+  "url": "http://ema.europa.eu/fhir/ValueSet/EUepimedicinedomainVs",
+  "experimental": false,
+  "publisher": "European Medicines Agency",
+  "jurisdiction": [
+    {
+      "text": "European Union"
+    }
+  ],
+  "description": "EU EPI medicine domain value set, defined in EMA's Referentials Management Service.",
+  "compose": {
+    "include": [
+      {
+        "system": "http://ema.europa.eu/fhir/CodeSystem/100000000004"
+      }
+    ]
+  }
+}
