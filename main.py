@@ -1,18 +1,25 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+import hashlib
 import os
 import re
 import json
 import shutil
 import logging
 import tempfile
+import uuid
 from dataclasses import asdict
 
 import doc_parser as parser
 import fhir_mapper as mapper
 import fhir_validator as validator
 import diff_engine
+# P1-PUB-1..4: opt-in publication / QR / render path. Imported at module load
+# but inert until `publish: true` is sent on a request and the tenant is on
+# `PUBLICATION_TENANTS_ALLOWLIST` (CLAUDE.md §5.7 per-tenant feature flag).
+import publication_service as pub
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -41,14 +48,51 @@ CSS_HREF = "/static/epi-standard.css"
 
 
 @app.post("/api/process_stateless")
-def process_stateless(file: UploadFile = File(...)):
+def process_stateless(
+    file: UploadFile = File(...),
+    publish: bool = Form(False),
+    tenant_id: str = Form(""),
+):
     """
     Full ePI processing pipeline matching the Streamlit app functionality.
     Returns ALL data: validation runs, fix log, diff score, bundle JSON/XML,
     markdown report, and downloadable artifacts.
+
+    Publication path (P1-PUB-1..4, opt-in, additive):
+        publish=False or omitted (default)
+            Behaviour and response shape are byte-identical to v2.0.0.
+            The 21-field response in user story 8 is preserved.
+        publish=True, status ∈ {"validated", "partially_fixed"}
+            Two additive keys appear at the *end* of the response:
+            `publication_id` (deterministic UUID v5 from tenant + bundle hash)
+            and `qr_svg` (base64 SVG of the QR resolving to the render URL).
+        publish=True, status == "errors"
+            Returns HTTP 409 with code PUBLISH_REJECTED_INVALID_BUNDLE.
+            Bright line: a non-conforming bundle is never published
+            (CLAUDE.md §10 #12).
+        publish=True, tenant not on PUBLICATION_TENANTS_ALLOWLIST
+            Returns HTTP 403 with code PUBLICATION_FEATURE_DISABLED.
+            Per-tenant feature flag default-off (CLAUDE.md §5.7).
     """
     try:
         logger.info(f"Received stateless request for file: {file.filename}")
+        # P1-PUB-1: short-circuit when the caller asks to publish but is not
+        # on the per-tenant allowlist. We reject before doing any parsing or
+        # validator work so a non-allowlisted tenant cannot probe pipeline
+        # behaviour by uploading varying inputs. This check fires ONLY when
+        # `publish: true` is sent — the existing default-path is unchanged.
+        if publish and not pub.tenant_is_allowlisted(tenant_id):
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail": (
+                        f"publication is not enabled for tenant {tenant_id!r}; "
+                        f"contact ops to be added to the "
+                        f"PUBLICATION_TENANTS_ALLOWLIST"
+                    ),
+                    "code": "PUBLICATION_FEATURE_DISABLED",
+                },
+            )
         with tempfile.TemporaryDirectory() as temp_dir:
             safe_name = file.filename.replace(" ", "_")
             local_file_path = os.path.join(temp_dir, safe_name)
@@ -186,7 +230,8 @@ def process_stateless(file: UploadFile = File(...)):
             else:
                 status = "errors"
 
-            return {
+            # --- v2.0.0 baseline response (21 fields, public contract, frozen) ---
+            response = {
                 # Core fields for Supabase
                 "status": status,
                 "error_count": error_count,
@@ -232,11 +277,124 @@ def process_stateless(file: UploadFile = File(...)):
                 "css_href": CSS_HREF,
             }
 
+            # --- P1-PUB: opt-in publication path. Strictly additive. ---
+            # When `publish` is False (default) we return the baseline shape
+            # untouched — byte-equivalent to v2.0.0 (CLAUDE.md §5.1).
+            # The per-tenant allowlist check has already fired at the top
+            # of the endpoint, before any parsing. Here we only enforce the
+            # post-pipeline content guarantee.
+            if publish:
+                # Bright line: never publish a non-conforming bundle
+                # (CLAUDE.md §10 #12).
+                if status == "errors":
+                    return JSONResponse(
+                        status_code=409,
+                        content={
+                            "detail": "cannot publish a non-conforming bundle",
+                            "code": "PUBLISH_REJECTED_INVALID_BUNDLE",
+                            "error_count": error_count,
+                        },
+                    )
+                bundle_sha256 = hashlib.sha256(
+                    bundle_xml.encode("utf-8")
+                ).hexdigest()
+                narrative_xhtml = _extract_narrative_xhtml(fixed_xml)
+                # Single-language v1 (P2-PUB-LANG deferred).
+                language = "en"
+                correlation_id = str(uuid.uuid4())
+                record = pub.publish_bundle(
+                    tenant_id=tenant_id,
+                    bundle_sha256=bundle_sha256,
+                    xhtml=narrative_xhtml,
+                    language=language,
+                    validator_outcome=status,
+                    fidelity_score=response["fidelity_score"],
+                    correlation_id=correlation_id,
+                    actor_id="system",  # FUTURE: replace with authenticated user
+                )
+                # Append the two additive fields at the *bottom* of the response
+                # so client parsers that depend on order keep working
+                # (CLAUDE.md §9.1).
+                response["publication_id"] = record.publication_id
+                response["qr_svg"] = record.qr_svg
+
+            return response
+
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("Stateless pipeline failed")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Pull every <text>...</text> narrative out of a FHIR Composition XML and
+# concatenate them into a single XHTML fragment for storage + scan-time
+# rendering. Pragmatic regex pass — robust enough for v1 demo. Future
+# (P2-PUB-PROD): swap to fhir.resources XML parsing for fidelity.
+_TEXT_NARRATIVE_RE = re.compile(
+    r"<text\b[^>]*>(.*?)</text>", re.DOTALL | re.IGNORECASE
+)
+
+
+def _extract_narrative_xhtml(composition_xml: str) -> str:
+    parts = _TEXT_NARRATIVE_RE.findall(composition_xml or "")
+    if not parts:
+        return (
+            '<div xmlns="http://www.w3.org/1999/xhtml" class="epi-narrative">'
+            'No human-readable narrative was generated for this bundle.</div>'
+        )
+    return (
+        '<div xmlns="http://www.w3.org/1999/xhtml" class="epi-narrative">\n'
+        + "\n".join(parts)
+        + "\n</div>"
+    )
+
+
+@app.get("/api/v1/render/{publication_id}")
+def render_publication(publication_id: str):
+    """
+    Public render endpoint for a previously-published bundle (P1-PUB-2).
+
+    Unauthenticated by design (mixed-audience scan: patient / HCP / QA reviewer).
+    Returns the rendered XHTML leaflet wrapped in a page chrome that links
+    `/static/epi-standard.css`, declares the preview watermark required until
+    P2-PUB-LANG and P2-PUB-PROD ship, and embeds an integrity-disclosure footer.
+
+    Status codes:
+        200  XHTML content served. content-type: application/xhtml+xml.
+        404  publication_id is not in the store.
+        410  publication_id has been revoked. body includes `revoked_at`.
+
+    No transforms at scan time (CLAUDE.md §10 #9): the stored XHTML is served
+    byte-for-byte.
+    """
+    record = pub.lookup(publication_id)
+    if record is None:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "detail": "publication not found",
+                "code": "PUBLICATION_NOT_FOUND",
+            },
+        )
+    if record.revoked_at is not None:
+        return JSONResponse(
+            status_code=410,
+            content={
+                "detail": "publication revoked",
+                "code": "PUBLICATION_REVOKED",
+                "revoked_at": record.revoked_at,
+                "reason": record.revocation_reason,
+            },
+        )
+    correlation_id = str(uuid.uuid4())
+    pub.record_served(publication_id=publication_id, correlation_id=correlation_id)
+    xhtml_page = pub.render_xhtml(record, css_href=CSS_HREF)
+    return Response(
+        content=xhtml_page,
+        media_type="application/xhtml+xml; charset=utf-8",
+        headers={"X-Correlation-Id": correlation_id},
+    )
 
 
 @app.get("/health")

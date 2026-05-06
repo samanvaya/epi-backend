@@ -5,3 +5,7 @@ fhir.resources
 pypdf>=3.17.0
 mammoth>=1.6.0
 httpx>=0.24.0
+# P1-PUB-1..3: deterministic SVG QR codes for the publication path.
+# Pinning the version keeps qr_svg byte-deterministic across deployments —
+# any bump is a P1-PUB-impact change requiring regenerated test baselines.
+qrcode==7.4.2

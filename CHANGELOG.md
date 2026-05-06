@@ -11,10 +11,22 @@ Operating rules for this file (see `CLAUDE.md` §4.3, §6.6, §8): every code ch
 ## [Unreleased]
 
 ### Added
-- (track in-flight additions here)
+- **P1-PUB-1.** Optional `publish: bool = Form(False)` parameter on `POST /api/process_stateless`. When `true` and `status ∈ {"validated", "partially_fixed"}`, the response gains two **additive** keys: `publication_id` (deterministic UUID v5 derived from `(tenant_id, bundle_sha256)`) and `qr_svg` (base64-encoded SVG QR code that resolves to the public render URL). When `publish` is absent or `false`, the 21-field v2.0.0 response shape is byte-identical (no field renames, no removals, no semantic drift). When `publish: true` and `status == "errors"`, returns HTTP 409 `{"code": "PUBLISH_REJECTED_INVALID_BUNDLE"}` (CLAUDE.md §10 #12 — never publish a non-conforming bundle).
+- **P1-PUB-2.** New route `GET /api/v1/render/{publication_id}` returns the rendered XHTML leaflet for the stored bundle: `application/xhtml+xml; charset=utf-8`, `<link rel="stylesheet" href="/static/epi-standard.css">` in `<head>`, footer block disclosing truncated `bundle_sha256`, `validator_outcome`, `published_at` (ISO-8601 UTC), and `correlation_id`. 404 on unknown id; 410 Gone on revoked. Render output is byte-deterministic from the stored bundle — no fixers, no rewrites at scan time (CLAUDE.md §10 #9).
+- **P1-PUB-3.** Idempotency contract: `publish(publish(x)) == publish(x)`. Re-publishing a bundle for the same tenant returns the same `publication_id`, the same `qr_svg`, and emits a `publication.republished` audit event linked to the existing publication row (no duplicate row).
+- **P1-PUB-4.** Audit trail for publication lifecycle — `publication.created`, `publication.served`, `publication.republished`, `publication.revoked` — written to `publication_audit` table in the SQLite v1 store. `publication.served` rows log NO scanner IP or user-agent (GDPR posture, CLAUDE.md §4.5); aggregate `scan_count` is derived by row-count.
+- New module `qr_generator.py` — wraps `qrcode` to emit deterministic SVG bytes from a URL.
+- New module `publication_service.py` — SQLite-backed write-once publication store keyed by `publication_id`. Schema is forward-compatible with the Sprint 2 Postgres + object-storage migration.
+- New tests under `tests/contract/test_publication.py` (HTTP shape, status codes, additive-only response, 409 / 404 / 410 paths) and `tests/unit/test_qr_idempotency.py` (publication_id derivation, SVG byte determinism, `f(f(x)) == f(x)` for the publish path).
+- New env vars: `PUBLICATION_TENANTS_ALLOWLIST` (comma-separated tenant slugs allowed to use the publish path), `PUBLICATION_DB_PATH` (defaults to `data/publications.db`), `PUBLICATION_PUBLIC_BASE_URL` (defaults to `http://localhost:8000` in dev).
+- "Preview" watermark + `<meta name="publication-stability" content="preview">` on every rendered page until P2-PUB-LANG (multi-language) and P2-PUB-PROD (production resolver SLA) ship. The watermark is the gate between demo and packaging-grade (FEATURE_SPEC §8 Q11).
+- New user story 14 in FEATURE_SPEC §4.
+- Spec entries P1-PUB-1..4 (FEATURE_SPEC §5), P2-PUB-LANG and P2-PUB-PROD (§5 P2), and traceability rows in §7.
+- New `requirements.txt` entry: `qrcode==7.4.2`.
 
 ### Changed
-- 
+- `requirements.txt` — `qrcode` added (additive; no version bumps to existing pins).
+- The two-phase pipeline (FHIR compliance → Fidelity) is **unchanged**. Publication is a Phase 3 *post-bundle artefact* layer that runs only when `publish: true` is passed (CLAUDE.md §5.3 protected — Phase ordering and existing constants untouched).
 
 ### Deprecated
 - 
@@ -26,7 +38,7 @@ Operating rules for this file (see `CLAUDE.md` §4.3, §6.6, §8): every code ch
 - 
 
 ### Security
-- 
+- The render endpoint is unauthenticated by design (mixed-audience: patient / HCP / QA reviewer). v1 is gated by per-tenant feature flag `publication_v1_enabled` (default off) and limited to design-partner tenants in `PUBLICATION_TENANTS_ALLOWLIST`. Public exposure beyond design partners is gated on P2-PUB-PROD (rate-limiting + DDoS posture + CDN).
 
 ---
 

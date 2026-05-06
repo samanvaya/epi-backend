@@ -89,6 +89,7 @@ Ordered by priority. User types are deliberately specific (not "the user").
 11. **(Edge) As a user uploading a document with unescaped `&` characters, empty narrative divs, unclosed `<b>` tags, or HTML-style `<br>` instead of XHTML `<br/>`**, I want the engine to auto-repair these before submission, so that I am not blocked by `XHTML_*` validator errors I did not cause.
 12. **(Edge) As a user uploading a malformed or truly unparseable PDF**, I want a clear 500 error with a diagnostic message, so that I know to retry with a DOCX or a clean export.
 13. **(Edge) As a user whose document has only one canonical SmPC section anchor (e.g. just a table of contents),** I want the 422 message to tell me how many anchors I have and which sections are expected, so that I can fix my upload without contacting support.
+14. **As a Marketing Authorisation Holder's regulatory-operations lead**, I want to opt-in to publishing a converted SmPC bundle behind a stable URL and a scannable QR code, so that an authorised reader (patient, HCP, or QA reviewer) can scan the code and render the human-readable ePI leaflet on any device — without me running my own resolver. The flag is opt-in per request; when it is omitted, the response and pipeline behave exactly as today.
 
 ---
 
@@ -237,6 +238,34 @@ Current PDF parsing (pypdf → escaped text) loses tables and formatting because
 #### P1-9. Reconcile main.py vs test_e2e.py source_text construction
 `main.py` includes `labelling` in `source_text` (because Annex III content accumulates into it) but `test_e2e.py` excludes it. The intent in `main.py` is correct; update the test to match, or document the decision so test failures don't masquerade as bugs.
 
+#### P1-PUB-1. Opt-in publication flag on the conversion endpoint
+**Given** the existing `POST /api/process_stateless` contract, **when** the caller submits the multipart body with an additional `publish: true` field **and** the pipeline completes with `status ∈ {"validated", "partially_fixed"}`, **then** the response gains two additive fields:
+- `publication_id` — a deterministic UUID v5 derived from `(bundle_sha256, tenant_id)` so re-publishing the same bundle for the same tenant returns the same identifier (idempotency, see P1-PUB-3).
+- `qr_svg` — a base64-encoded SVG QR code that encodes the canonical render URL `https://epi.antigravity.eu/r/{publication_id}` (or the configured public base for non-prod environments).
+
+When `publish` is absent or `false`, the response is byte-identical to v2.0.0 — the 21-field shape in user story 8 is preserved (no field renames, no removals, no semantic drift). When `publish: true` is sent **and** `status == "errors"`, the endpoint returns **HTTP 409** with body `{"detail": "cannot publish a non-conforming bundle", "code": "PUBLISH_REJECTED_INVALID_BUNDLE"}` (see CLAUDE.md §10 #12). The conversion result itself is not persisted in this 409 branch; the caller gets the same in-memory pipeline output via a separate `publish: false` retry.
+
+The feature is gated by a per-tenant feature flag `publication_v1_enabled`, default off (CLAUDE.md §5.7). For v1 demo, the flag is read from the `PUBLICATION_TENANTS_ALLOWLIST` environment variable; the production flag store lands in Sprint 1 alongside the tenant config table.
+
+#### P1-PUB-2. Public render endpoint for the human-readable leaflet
+**Given** an existing `publication_id`, **when** any caller issues `GET /api/v1/render/{publication_id}`, **then** the service returns the rendered XHTML leaflet for that bundle with content-type `application/xhtml+xml; charset=utf-8`, a `<link rel="stylesheet" href="/static/epi-standard.css">` in the `<head>`, and a footer block disclosing `bundle_sha256` (truncated to 12 chars), `validator_outcome`, `published_at` (ISO-8601 UTC), and `correlation_id`. The endpoint is unauthenticated by design (mixed-audience use case — patient/HCP/QA, see user story 14).
+
+When the `publication_id` does not exist, the endpoint returns **HTTP 404** with body `{"detail": "publication not found", "code": "PUBLICATION_NOT_FOUND"}`. When the publication has been revoked (P1-PUB-4 audit event `publication.revoked`), the endpoint returns **HTTP 410 Gone** with body `{"detail": "publication revoked", "code": "PUBLICATION_REVOKED", "revoked_at": "<ISO-8601 UTC>"}`. The render output is byte-deterministic from the stored bundle — no transforms, no fixers, no rewrites at scan time (CLAUDE.md §10 #9). v1 is single-language: the rendered language is the language of the originally-uploaded SmPC. Multi-language negotiation is deferred to P2-PUB-LANG (see Open Question §8 #11).
+
+A `<meta name="publication-stability" content="preview">` tag and a small "preview" watermark on the rendered page MUST be present until P2-PUB-LANG ships — this is the line between demo and packaging-grade publication and is enforced by a contract test.
+
+#### P1-PUB-3. Idempotency of publication
+**Given** a bundle that has already been published once for a given tenant, **when** the caller re-submits the same source DOCX with `publish: true` and the same authenticated tenant, **then** the resulting `publication_id` is byte-identical to the prior publication, the `qr_svg` is byte-identical, and the stored XHTML payload is byte-identical. Re-publishing produces no new row in the publication store — it is a no-op apart from an `audit.publication.republished` event linked to the existing `publication_id`. The check is implemented by deriving `publication_id = uuid5(NAMESPACE_PUBLICATION, f"{tenant_id}:{bundle_sha256}")`. A unit test asserts `publish(publish(x)) == publish(x)`.
+
+#### P1-PUB-4. Audit trail for publication lifecycle
+Every publication lifecycle event MUST produce an append-only audit row with the structured fields below (CLAUDE.md §4.1):
+- `publication.created` — emitted on first successful publish. Fields: `actor_id`, `tenant_id`, `publication_id`, `bundle_sha256`, `correlation_id`, `created_at` (ISO-8601 UTC server clock), `language`, `validator_outcome`, `fidelity_score`.
+- `publication.served` — emitted on each successful `GET /api/v1/render/{id}`. Fields: `publication_id`, `served_at`, `correlation_id`. **No** IP, user-agent, or other identifying scanner data is logged (GDPR posture per CLAUDE.md §4.5; aggregate scan_count is computed by counting these rows, not by storing per-scan PII).
+- `publication.republished` — emitted when an idempotent re-publish is observed. Fields: `actor_id`, `tenant_id`, `publication_id`, `correlation_id`, `republished_at`.
+- `publication.revoked` — emitted when an admin action takes the publication out of service. Fields: `actor_id`, `tenant_id`, `publication_id`, `correlation_id`, `revoked_at`, `reason`. The publication row is **not** physically deleted (CLAUDE.md §10 #2); the resolver returns 410 Gone.
+
+For v1 demo, audit rows are written to the existing in-memory audit log structure (which already exists for validation events) plus the SQLite publication store. The Postgres-backed hash-chained audit landed in Sprint 2 supersedes both.
+
 ---
 
 ### Future Considerations (P2)
@@ -249,6 +278,8 @@ Current PDF parsing (pypdf → escaped text) loses tables and formatting because
 - **P2-6. Async / queued path.** Move the Java validator to a dedicated worker pool; lift `MAX_VALIDATION_ITERATIONS` to 3–5 in async; expose `POST /v1/jobs` and `GET /v1/jobs/:id`.
 - **P2-7. Domain extension re-enablement.** When the EMA IG validator package recognises `http://ema.europa.eu/fhir/extension/domain`, restore the extension on `Composition.subject` (currently commented in `fhir_mapper.py`).
 - **P2-8. Variation packages (Type IB, II).** Accept a prior-submission bundle reference and emit a delta. This is what Reg-Ops actually does day-to-day; today the spec only covers fresh MAA submissions.
+- **P2-PUB-LANG. Multi-language render at scan time.** When the `Accept-Language` header is set (or a `?lang=xx` query parameter is supplied), `GET /api/v1/render/{publication_id}` selects the matching authorised language version of the bundle and renders that variant. Falls back to the bundle's primary language if the requested locale is not in the published set. Adds an authorised-languages list to the publication store schema. **Until this ships, the rendered page MUST carry the "preview" watermark required by P1-PUB-2.** This is the gate between demo and packaging-grade publication; without it we cannot defend printing the QR on a carton (CLAUDE.md §2 strategic context).
+- **P2-PUB-PROD. Production-grade resolver SLA.** Move the publication store from SQLite to Postgres + content-addressed object storage; deploy resolver behind an EU-resident CDN (Cloudflare or equivalent) with 99.9% uptime; add monitoring, rate limiting, DDoS posture; bring the resolver into CSV scope (URS / FS / DS / IQ / OQ / PQ). Required before any customer prints the QR on Annex III artwork. Pairs with P2-PUB-LANG.
 
 ---
 
@@ -295,8 +326,12 @@ Every P0 requirement is grounded in a specific module / function. Reviewers use 
 | P0-10. Status taxonomy | `main.py` | lines 182–187 |
 | P0-11. Liveness | `main.py` | `health_check` (line 242) |
 | P0-12. CORS | `main.py` | `CORSMiddleware(allow_origins=["*"], …)` |
+| P1-PUB-1. Publish flag (additive response) | `main.py`, `publication_service.py` | `process_stateless` accepts `publish: bool = Form(False)`; appends `publication_id` and `qr_svg` keys when publish path runs; `publication_service.publish_bundle()`; tenant flag check via `PUBLICATION_TENANTS_ALLOWLIST` |
+| P1-PUB-2. Render endpoint | `main.py`, `publication_service.py` | `GET /api/v1/render/{publication_id}` route; `publication_service.lookup()`; XHTML response with `epi-standard.css` link, `<meta name="publication-stability" content="preview">`, and footer disclosure block |
+| P1-PUB-3. Publication idempotency | `publication_service.py`, `qr_generator.py` | `publication_service.derive_publication_id()` using `uuid5(NAMESPACE_PUBLICATION, f"{tenant_id}:{bundle_sha256}")`; `qr_generator.svg_for_url()` deterministic by URL |
+| P1-PUB-4. Audit trail | `publication_service.py` | `_audit_emit()` records `publication.created`, `publication.served`, `publication.republished`, `publication.revoked`; SQLite audit table `publication_audit` |
 
-A failing test in `test_e2e.py` against any of these symbols should be treated as a P0 regression.
+A failing test in `test_e2e.py` (or `tests/contract/test_publication.py` for P1-PUB-*) against any of these symbols should be treated as a P0 / P1 regression.
 
 ---
 
@@ -312,6 +347,9 @@ A failing test in `test_e2e.py` against any of these symbols should be treated a
 8. **(Non-blocking — QA)** Canonical reference set of "gold" documents — `valid_test.docx` and `Joenja_QRD_Final_Template_Sachin-v2.docx` are referenced in `test_e2e.py`, but we do not have an EMA-signed-off corpus. Action: secure ≥ 5 customer-supplied SmPCs as the v1 acceptance suite.
 9. **(Non-blocking — Engineering)** `main.py` includes `labelling` in `source_text` for fidelity scoring; `test_e2e.py` excludes it. Reconcile (P1-9).
 10. **(Non-blocking — Engineering)** The `Composition.subject` `domain` extension is commented out because the validator flags it. Track when the `hl7.eu.fhir.epil` IG package recognises it, then restore.
+11. **(Blocking — Regulatory + Product before any customer prints the QR on artwork)** P1-PUB v1 ships single-language with a `<meta name="publication-stability" content="preview">` tag and a "preview" watermark on the rendered page. The watermark must remain until P2-PUB-LANG (multi-language negotiation) and P2-PUB-PROD (production-grade resolver SLA) ship. Need a Reg SME + design-partner QA Lead sign-off on (a) the exact watermark wording, (b) the language-list JSON shape inside the publication store, and (c) the deprecation path from preview to packaging-grade.
+12. **(Non-blocking — Privacy / DPO)** `publication.served` audit rows do not log scanner IP or user-agent (GDPR posture). Confirm with DPO that the aggregate `scan_count` derived from row counting is acceptable for analytics — and that the absence of per-scan PII is documented in the DPA.
+13. **(Non-blocking — Security)** The `GET /api/v1/render/{publication_id}` endpoint is unauthenticated by design (mixed-audience scan use case). Need rate-limiting policy and DDoS posture before public exposure beyond design partners — covered by P2-PUB-PROD.
 
 ---
 
