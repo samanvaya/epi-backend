@@ -96,8 +96,21 @@ def process_stateless(
         with tempfile.TemporaryDirectory() as temp_dir:
             safe_name = file.filename.replace(" ", "_")
             local_file_path = os.path.join(temp_dir, safe_name)
+            # Stream-copy and compute the source SHA-256 in one pass. The
+            # source hash — not the generated bundle hash — is what derives
+            # publication_id. Reason: the FHIR mapper assigns new UUIDs on
+            # every call, so two runs on the same DOCX produce different
+            # bundle bytes and would break the P1-PUB-3 idempotency contract.
+            # Hashing the upload bytes guarantees same-file → same-publication.
+            _source_hasher = hashlib.sha256()
             with open(local_file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+                while True:
+                    chunk = file.file.read(64 * 1024)
+                    if not chunk:
+                        break
+                    _source_hasher.update(chunk)
+                    buffer.write(chunk)
+            source_sha256 = _source_hasher.hexdigest()
 
             # 1. Parse document into sections
             sections = parser.parse_document(local_file_path, doc_type="Auto")
@@ -295,9 +308,9 @@ def process_stateless(
                             "error_count": error_count,
                         },
                     )
-                bundle_sha256 = hashlib.sha256(
-                    bundle_xml.encode("utf-8")
-                ).hexdigest()
+                # P1-PUB-3 idempotency key: hash the source upload, not the
+                # bundle. See comment at the top of process_stateless for why.
+                bundle_sha256 = source_sha256
                 narrative_xhtml = _extract_narrative_xhtml(fixed_xml)
                 # Single-language v1 (P2-PUB-LANG deferred).
                 language = "en"

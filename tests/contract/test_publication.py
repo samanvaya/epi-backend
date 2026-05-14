@@ -32,9 +32,11 @@ if _REPO_ROOT not in sys.path:
 # Defer imports of `main` until env vars are set in setUp; this is a contract
 # test, not a unit test, so we exercise the FastAPI app via TestClient.
 
-# A tiny valid SmPC fixture path. Falls back to skipping tests that need it
-# if the file is missing (CI without fixtures).
-_FIXTURE_PATH = os.path.join(_REPO_ROOT, "valid_test.docx")
+# Real-shape synthetic SmPC fixture — produced by
+# `tests/fixtures/gen_synthetic_smpc.py` and committed to the repo. Passes
+# the P0-2 SmPC structural gate and exercises the full publish path.
+# If the file is missing, tests skip cleanly rather than fail.
+_FIXTURE_PATH = os.path.join(_REPO_ROOT, "tests", "fixtures", "synthetic_smpc.docx")
 
 
 # v2.0.0 baseline response shape — frozen public contract.
