@@ -40,7 +40,7 @@ Operating rules for this file (see `CLAUDE.md` §4.3, §6.6, §8): every code ch
 - 
 
 ### Fixed
-- 
+- **P0-3a.** SmPCs whose QRD section numbers exist only as Word automatic numbering (`numPr`) were rejected by the P0-2 gate with `422 … Detected 1 SmPC section anchor(s)` because mammoth drops automatic numbering. `read_docx` now materialises the resolved numbering label as text — only on paragraphs that then match an SmPC/PIL heading pattern — before mammoth runs. Typed-number documents are byte-identical (pre-pass is a no-op). New fixture `tests/fixtures/synthetic_smpc_autonum.docx` (+ generator), tests `tests/unit/test_autonumbered_headings.py`, `tests/contract/test_autonumbered_smpc.py`.
 
 ### Security
 - The render endpoint is unauthenticated by design (mixed-audience: patient / HCP / QA reviewer). v1 is gated by per-tenant feature flag `publication_v1_enabled` (default off) and limited to design-partner tenants in `PUBLICATION_TENANTS_ALLOWLIST`. Public exposure beyond design partners is gated on P2-PUB-PROD (rate-limiting + DDoS posture + CDN).
