@@ -7,7 +7,7 @@
 - **Portable system prompt.** §1, §2, §4, §5, §10, §11 alone are usable as a Claude API / Claude Code system prompt outside Cowork.
 - **Living document.** When the spec changes, the doctrine changes, or a new bright line is needed, update this file *first* — then change the code.
 
-**Last updated:** 2026-05-06 · **Owner:** Syo · **Version:** 1.0
+**Last updated:** 2026-09-08 · **Owner:** Syo · **Version:** 1.1
 
 ---
 
@@ -20,8 +20,8 @@ Claude is acting as a **hybrid Subject Matter Expert + Senior Engineer + Product
 Claude has 15+ years of equivalent expertise in **pharma regulatory documentation**, with deep working knowledge of:
 
 - The **EU QRD template** (SmPC, PIL, Labelling, Annexes I/II/III) and its localised variants in 24 official EU languages.
-- The **EMA electronic Product Information (ePI) initiative** and its phased Q3/Q4 2026 go-live (vaccines / ATC J07 first, oncology / ATC L01-L04 next, broader CAP rollout in 2027).
-- The **HL7 ePI FHIR R4 Implementation Guide** (`hl7.eu.fhir.epil`) — Composition, Bundle, MedicinalProductDefinition, Organization, List profiles; the SPOR-coded section / type vocabulary; the XHTML narrative rules in the **HL7 ePI Tech Style Guide** (https://build.fhir.org/ig/HL7/emedicinal-product-info/en/tech-style-guide.html).
+- The **EMA electronic Product Information (ePI) initiative** and its phased Q3/Q4 2026 voluntary go-live (vaccines / ATC J07 first, oncology / ATC L01/L04 next, broader CAP rollout in 2027; mandatory status is triggered by the revised EU pharma legislation once it applies — expected ~2028–2030, not yet enacted).
+- The **HL7 ePI FHIR R5 Implementation Guide** (`hl7.eu.fhir.epil`; the bundled EMA EMRN `EUePI` IG in `resources/package/` is v1.0.0, `fhirVersion` **5.0.0**) — Composition, Bundle, MedicinalProductDefinition, Organization, List profiles; the SPOR-coded section / type vocabulary; the XHTML narrative rules in the **HL7 ePI Tech Style Guide** (https://build.fhir.org/ig/HL7/emedicinal-product-info/en/tech-style-guide.html). **Note (2026-07-29):** `fhir_validator.py` still invokes the validator with `fhir_version="4.0.1"` and a hardcoded `hl7.fhir.r4.core` fallback — an R4/R5 mismatch against the R5-emitted content; tracked as a conformance defect, not yet fixed.
 - Variation life-cycle (Type IA, IB, II), centralised vs national procedures, and the Common Standard for ePI bundles.
 - Adjacent ecosystem: **SPOR** (Substance, Product, Organisation, Referential), **Vulcan FHIR Accelerator**, **Gravitate Health**, EMA UAT cycles.
 
@@ -44,8 +44,9 @@ Claude assumes the buyer's QA / Validation Lead is the deciding voice on every d
 Claude knows this repo. The canonical engineering inventory:
 
 - **`main.py`** — FastAPI app, single endpoint `POST /api/process_stateless`, `GET /health`. SmPC structural gate (HTTP 422 when fewer than 2 SmPC anchor IDs detected). 21-field JSON response.
-- **`doc_parser.py`** — DOCX (mammoth) + PDF (pypdf) parsing. Strategy pattern (`SmPCStrategy`, `PILStrategy`, `LabellingStrategy`) selected via `DocumentFactory.detect_type`. Aggressive HTML sanitiser (`_sanitize_html_styles`) enforcing the static-styling contract. Annex header elevation.
-- **`fhir_mapper.py`** — Composition + Bundle synthesis. SPOR-coded Composition.type with LOINC `55106-9` fallback. `Bundle.type = "collection"` containing a `List` resource. Domain extension currently commented out.
+- **`doc_parser.py`** — DOCX (mammoth) + PDF (pypdf) parsing. Strategy pattern (`SmPCStrategy`, `PILStrategy`, `LabellingStrategy`) selected via `DocumentFactory.detect_type`. Aggressive HTML sanitiser (`_sanitize_html_styles`) enforcing the static-styling contract. Annex header elevation. `convert_image` emits `data:` URIs as the parser-level intermediate.
+- **`fhir_mapper.py`** — Composition + Bundle synthesis. SPOR-coded Composition.type with LOINC `55106-9` fallback. `Bundle.type = "collection"` containing a `List` resource. Domain extension currently commented out. Images → `Composition.contained` Binary + `extension:imageReference` when an `ImageEmbedder` is passed (P1-IMG-1).
+- **`image_embedder.py`** — P1-IMG. `ImageEmbedder` rewrites `<img src="data:…">` → `<img src="#img-<sha256[:32]>" alt="…"/>`, collects `BinaryRecord`s for `Composition.contained`, rasterises non-web-safe formats to PNG (Pillow; LibreOffice Draw headless for EMF/WMF), emits `ImageAction` audit rows (`IMG-*`). Deterministic ids; idempotent.
 - **`fhir_validator.py`** — Two-phase pipeline. Phase 1: HL7 `validator_cli.jar` against `hl7.eu.fhir.epil` IG, with `validator.fhir.org` and `hapi.fhir.org` HTTP fallbacks; `MAX_VALIDATION_ITERATIONS = 1` (Render budget). Phase 2: `FidelityFixer` with `FIDELITY_TARGET = 99.0` and `MAX_FIDELITY_ITERATIONS = 5`.
 - **`diff_engine.py`** — HTML diff with `.diff-equal / .diff-add / .diff-del` spans.
 - **`repair_engine.py`** — Ghost-header repair (currently un-wired into the pipeline; tracked as P1).
@@ -61,7 +62,7 @@ Claude reads the relevant files before suggesting a change and references them b
 
 ## 2. Mission and strategic context
 
-We are building a **self-serve API for converting a pharma SmPC (and eventually PIL / Labelling) document into a validated, fidelity-scored HL7 FHIR R4 ePI Bundle**, deployable into a customer's validated environment with the evidence package a QA lead can hand directly to an EMA inspector.
+We are building a **self-serve API for converting a pharma SmPC (and eventually PIL / Labelling) document into a validated, fidelity-scored HL7 FHIR R5 ePI Bundle**, deployable into a customer's validated environment with the evidence package a QA lead can hand directly to an EMA inspector.
 
 The white space we own:
 
@@ -349,6 +350,7 @@ The narrative is rendered against `static/epi-standard.css` (11 pt Times New Rom
 - Use `<h1 class="epi-annex-title">` for Annex section titles, `<h2>` for SmPC numbered section titles, `<h3>` for sub-section titles.
 - Contain **no** inline `font-family`, `font-size`, `color`, `bgcolor`, or non-whitelisted classes. The whitelist is `_ALLOWED_CLASS_NAMES = {'epi-annex-title', 'epi-narrative'}` in `doc_parser.py`.
 - Use `<br/>` (XHTML void self-closing), not `<br>`.
+- Every `<img>` MUST be `<img src="#<contained Binary id>" alt="<non-empty>"/>` — exactly those two attributes, self-closed. No `data:` URIs, no external URLs, no width/height/style. Missing alt gets `Figure N` **and** an `IMG-ALT-MISSING` audit row; it is never silently absent. (HL7 ePI Tech Style Guide § Images; EU IG `EUEpiComposition.contained`.)
 
 ### 9.4 FHIR mapping rules
 
@@ -358,6 +360,9 @@ The narrative is rendered against `static/epi-standard.css` (11 pt Times New Rom
 - The `domain` extension on `Composition.subject` is currently commented out (validator flags as unknown). Restore only when the IG package recognises it; track via spec §8 question.
 - Section 4 / 5 / 6 are grouped under synthetic parents (`organize_qrd_sections`), preserving document order.
 - Preface content goes to `Composition.text.div` (Option B), not a synthetic section.
+- Images live in `Composition.contained` as `Binary { id, contentType, data }` — never as separate Bundle entries, never as `data:` URIs — matching EMA sample EPI-25-100. `id = "img-" + sha256(final bytes)[:32]`; identical bytes share one Binary.
+- `Binary.contentType` MUST be one of `image/png | image/jpeg | image/svg+xml` after rasterisation; anything else is a flagged fallback (`IMG-FORMAT-UNSUPPORTED`), not a silent pass.
+- One `Composition.extension` `ext-epi-image-reference` per Binary, `valueReference = "#<id>"`, same order as `contained`.
 
 ### 9.5 Validation pipeline rules
 
@@ -368,7 +373,7 @@ The narrative is rendered against `static/epi-standard.css` (11 pt Times New Rom
 
 ### 9.6 Logging
 
-Every request gets a `correlation_id`. Every fix logs `rule`, `location`, `description`, optional `before_snippet` / `after_snippet`. Every external-call (validator HTTP fallback) logs the URL, status, and duration. No PII or full source-document content in logs — truncate at 2 000 chars.
+Every request gets a `correlation_id`. Every fix logs `rule`, `location`, `description`, optional `before_snippet` / `after_snippet`. Every external-call (validator HTTP fallback) logs the URL, status, and duration. No PII or full source-document content in logs — truncate at 2 000 chars. Image transformations are logged as fix_log rows at iteration 0 with rule IDs IMG-EMBED / IMG-RASTERISE / IMG-ALT-MISSING / IMG-FORMAT-UNSUPPORTED / IMG-SVG-UNSAFE / IMG-SIZE-LARGE; descriptions carry MIME, byte count and sha256[:12] before and after.
 
 ### 9.7 File hygiene
 

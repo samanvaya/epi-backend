@@ -9,3 +9,6 @@ httpx>=0.24.0
 # Pinning the version keeps qr_svg byte-deterministic across deployments —
 # any bump is a P1-PUB-impact change requiring regenerated test baselines.
 qrcode==7.4.2
+# P1-IMG-2: deterministic PNG re-encoding + Pillow-native rasterisation.
+# Pinned: a Pillow bump can change PNG bytes -> Binary ids -> golden baselines.
+Pillow==12.3.0

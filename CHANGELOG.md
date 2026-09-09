@@ -23,10 +23,15 @@ Operating rules for this file (see `CLAUDE.md` §4.3, §6.6, §8): every code ch
 - New user story 14 in FEATURE_SPEC §4.
 - Spec entries P1-PUB-1..4 (FEATURE_SPEC §5), P2-PUB-LANG and P2-PUB-PROD (§5 P2), and traceability rows in §7.
 - New `requirements.txt` entry: `qrcode==7.4.2`.
+- **P1-IMG-1..4.** Images in an uploaded DOCX are emitted as `Composition.contained` `Binary` resources referenced from the narrative as `<img src="#img-<sha256[:32]>" alt="…"/>`, with one `ext-epi-image-reference` extension per Binary — the pattern used by the EU IG (`EUEpiComposition.contained`) and EMA sample EPI-25-100. Non-web-safe formats (TIFF/BMP/GIF/EMF/WMF…) are rasterised to PNG (Pillow; LibreOffice Draw headless for EMF/WMF); on conversion failure the original bytes are preserved and flagged. Missing alt text gets `alt="Figure N"` plus an `IMG-ALT-MISSING` audit row. All image transformations appear in `fix_log` as `iteration: 0` rows with `IMG-*` rule IDs. **No new response field** — the 21-field shape is unchanged. Gated by `IMAGE_BINARIES_TENANTS_ALLOWLIST` (default off; flag-off output byte-identical to v2.0.0).
+- New module `image_embedder.py`; new fixture `tests/fixtures/synthetic_smpc_images.docx` (+ generator); new tests `tests/unit/test_image_binaries.py`, `tests/contract/test_image_contract.py`.
+- `validation_log_json` gains an `iteration: 0` run carrying the `IMG-*` actions with before/after snippets when the image flag is on (additive inside an existing string field; flag-off unchanged).
+- New env var `IMAGE_BINARIES_TENANTS_ALLOWLIST`. New dependency `Pillow` (pinned). Docker image gains `libreoffice-draw` + `fonts-dejavu-core` (≈ +350 MB) for EMF/WMF rasterisation.
 
 ### Changed
 - `requirements.txt` — `qrcode` added (additive; no version bumps to existing pins).
 - The two-phase pipeline (FHIR compliance → Fidelity) is **unchanged**. Publication is a Phase 3 *post-bundle artefact* layer that runs only when `publish: true` is passed (CLAUDE.md §5.3 protected — Phase ordering and existing constants untouched).
+- Dockerfile: adds LibreOffice Draw headless layer; COPY image_embedder.py.
 
 ### Deprecated
 - 
@@ -39,6 +44,16 @@ Operating rules for this file (see `CLAUDE.md` §4.3, §6.6, §8): every code ch
 
 ### Security
 - The render endpoint is unauthenticated by design (mixed-audience: patient / HCP / QA reviewer). v1 is gated by per-tenant feature flag `publication_v1_enabled` (default off) and limited to design-partner tenants in `PUBLICATION_TENANTS_ALLOWLIST`. Public exposure beyond design partners is gated on P2-PUB-PROD (rate-limiting + DDoS posture + CDN).
+
+### Design (v2 intent — engineering not yet started)
+- **P2-PUB-PORTAL.** EMA-style portal at scan time replaces the v1 single-page render. The QR resolves to `GET /api/v2/p/{publication_id}`: product header, language picker with Apply + Export, left collapsible tree grouped by `doc_type` with one row per variant, right pane rendering the selected document's XHTML narrative under the canonical `epi-standard.css`. Server-side rendered; minimal vanilla JS. Language detection precedence at upload: QRD metadata → filename → heuristic (`langdetect`) → user-override picker, with the source surfaced in the UI.
+- **P2-PUB-VERSION.** Splits "what the QR is" from "what the QR resolves to." New entities: `Product`, `ProductPublication` (stable QR, one per product), `Document` (one per `(doc_type, language, variant)` triple), `DocumentVersion` (the actual content; `Document.current_version_id` is the activation pointer). Two-gate upload workflow: (1) product mapping confirmation, (2) internal QA approval (Approve+Activate / Approve only / Reject). Byte-identical re-upload is idempotent.
+- **P2-PUB-VAR.** Adds a third gate — the **agency decision** — for non-initial versions. `DocumentVersion` gains `variation_type` ∈ {`INITIAL`, `TYPE_IA`, `TYPE_IA_IN`, `TYPE_IB`, `TYPE_II`} and four `agency_*` columns. Activation rule: a version may only become current when its `internal_approval_status == 'APPROVED'` AND its agency gate is satisfied (Type IB needs `APPROVED` or `EXPIRED_WITHOUT_OBJECTION`; Type II needs `APPROVED`; Type IA satisfied at `SUBMITTED`). `EXPIRED_WITHOUT_OBJECTION` is user-attested, never auto-set. Daily cron surfaces reminders at 28d / 30d / 60d but never changes state. Audit events: `variation.classified`, `variation.submitted_to_agency`, `variation.agency_decision_recorded`, `variation.activated`, `variation.deactivation_blocked`. Full design lives in `outputs/VARIATION_LIFECYCLE_DESIGN.md`.
+- **P2-PUB-PDF.** Server-side PDF export of the portal page via WeasyPrint (`weasyprint==60.x`, pinned). Same XHTML the portal serves, plus preview banner, integrity footer (`bundle_sha256`, `validator_outcome`, `version_number`, `published_at`, `correlation_id`), page numbers, optional per-page QR.
+- **P2-PUB-AUDIT.** Postgres + hash-chained audit replaces the SQLite v1 store. SQLAlchemy + Alembic. Each `publication_audit` row carries `prev_row_hash` + `payload_hash`, making history tamper-evident. Retention column-enforced at ≥ 7 years per CLAUDE.md §4.1. Adapter pattern keeps tests on an in-memory store.
+- **v2 URL versioning.** All new endpoints live under `/api/v2/`. The v1 endpoints (`POST /api/process_stateless`, `GET /api/v1/render/{publication_id}`) remain as a back-compat layer for ≥ 6 months from v2 GA, with `X-API-Deprecated` and `X-API-Sunset-Date` headers throughout the deprecation window (CLAUDE.md §5.9).
+- **User story 15** added in FEATURE_SPEC §4 covering the product-centric multi-language, multi-version, multi-variant management workflow.
+- **Open questions Q14–Q18** added in FEATURE_SPEC §8 (Type-II window default, four-eyes on Type IB silent-approval, body-text language-detection confidence threshold, variant UX, v1 deprecation timeline).
 
 ---
 

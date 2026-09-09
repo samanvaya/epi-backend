@@ -7,15 +7,20 @@ Narrative XHTML rules (bold/italic, alignment, tables, lists, etc.) must
 follow that guide. Check it monthly for updates.
 """
 
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Optional, Union
+import base64
 import datetime
 import uuid
 import html
 import json
 import re
 
+# P1-IMG-1: images → Composition.contained Binary + ext-epi-image-reference.
+from image_embedder import EXT_IMAGE_REFERENCE, BinaryRecord, ImageEmbedder
+
 # Try importing fhir.resources, allow fallback for development/scaffolding
 try:
+    from fhir.resources.binary import Binary
     from fhir.resources.bundle import Bundle, BundleEntry
     from fhir.resources.composition import Composition, CompositionSection
     from fhir.resources.medicinalproductdefinition import MedicinalProductDefinition
@@ -31,6 +36,7 @@ try:
     from fhir.resources.address import Address
 except ImportError:
     # Dummy classes for when dependencies aren't loaded (e.g. CI/CD or initial init)
+    class Binary: pass
     class Bundle: pass
     class Composition: pass
     class MedicinalProductDefinition: pass
@@ -267,14 +273,86 @@ def organize_qrd_sections(sections_data: List[Dict[str, str]]) -> List[Compositi
             
     return final_sections
 
-def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str) -> Composition:
+# --- P1-IMG-1: contained Binary construction ---------------------------------
+
+# How this fhir.resources version wants `Binary.data` fed so that the JSON (and
+# hence the XML `<data value="…"/>`) carries the base64 text exactly once.
+# Resolved on first use by round-tripping a real record — never assumed.
+_BINARY_DATA_STRATEGY: Optional[str] = None
+
+
+def _binary_from_record(rec: BinaryRecord) -> Binary:
+    """Build a `Binary` whose serialised `data` is exactly `rec.data_b64`.
+
+    fhir.resources has changed the accepted input type for `base64Binary`
+    across releases (base64 text as `str`, base64 text as `bytes`, or raw
+    bytes it encodes itself). Passing the wrong one silently double-encodes
+    or fails validation — either would corrupt a regulated payload — so the
+    working strategy is verified by round-trip and cached (CLAUDE.md §4.1
+    Accurate; §11 "suspicious of looks-fine").
+    """
+    global _BINARY_DATA_STRATEGY
+    def _validated(value):
+        return Binary(id=rec.id, contentType=rec.content_type, data=value)
+
+    def _constructed(value):
+        # Last resort: bypass field validation (the R4 base64Binary regex some
+        # releases enforce omits "/", rejecting almost every real payload).
+        # The round-trip check below still proves the serialised output.
+        ctor = getattr(Binary, "model_construct", None) or getattr(Binary, "construct")
+        return ctor(id=rec.id, contentType=rec.content_type, data=value)
+
+    candidates = {
+        "b64_str": lambda: _validated(rec.data_b64),
+        "b64_bytes": lambda: _validated(rec.data_b64.encode("ascii")),
+        "raw_bytes": lambda: _validated(base64.b64decode(rec.data_b64)),
+        "construct_b64_str": lambda: _constructed(rec.data_b64),
+    }
+    order = ([_BINARY_DATA_STRATEGY] if _BINARY_DATA_STRATEGY else []) + \
+            [k for k in candidates if k != _BINARY_DATA_STRATEGY]
+    errors = []
+    for key in order:
+        try:
+            b = candidates[key]()
+            if json.loads(resource_to_json(b)).get("data") == rec.data_b64:
+                _BINARY_DATA_STRATEGY = key
+                return b
+            errors.append(f"{key}: serialised data != base64 payload")
+        except Exception as exc:  # noqa: BLE001 — try the next representation
+            errors.append(f"{key}: {exc.__class__.__name__}: {str(exc)[:120]}")
+    raise RuntimeError(
+        "P1-IMG-1: could not construct a Binary whose serialised data round-trips "
+        f"for {rec.id}; tried {errors}"
+    )
+
+
+def _embed_images(sections_data: List[Dict[str, Any]], embedder: ImageEmbedder) -> None:
+    """Rewrite `data:` images to `#id` refs IN PLACE, preface first then sections
+    in document order (P1-IMG-3 ordinal order). Already-rewritten text is a no-op,
+    so `source_text` and `generate_bundle` can reuse the same list safely."""
+    preface = [s for s in sections_data if s.get("section_id") == "_preface"]
+    others = [s for s in sections_data if s.get("section_id") != "_preface"]
+    for sec in preface + others:
+        sec_id = str(sec.get("section_id", ""))
+        sec["text"] = embedder.process(sec.get("text", "") or "", location=sec_id)
+
+
+def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str,
+                           embedder: Optional[ImageEmbedder] = None) -> Composition:
     doc_type = doc.get("type", "SmPC")
     filename = doc.get("filename", "unknown")
     sections_data = doc.get("sections", [])
-    
+
     comp_id = str(uuid.uuid4())
     spor_code = RMS_SPOR_CODES.get(doc_type, "100000155538")
-    
+
+    # P1-IMG-1 (flag-gated by the caller): mapping-time embedding, before any
+    # section is mapped, so `original_xml` already carries the Binaries that
+    # Phase 1 validates (CLAUDE.md §5.3). `embedder is None` → legacy path,
+    # byte-identical to v2.0.0.
+    if embedder is not None:
+        _embed_images(sections_data, embedder)
+
     # Rule 6: Group sections
     if doc_type == "SmPC":
         fhir_sections = organize_qrd_sections(sections_data)
@@ -321,8 +399,22 @@ def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str) -
         f'</div>'
     )
 
+    # P1-IMG-1 / D6: one contained Binary per distinct image, in first-appearance
+    # order, plus one EU IG `ext-epi-image-reference` extension per Binary in the
+    # same order (FEATURE_SPEC §8 Q21 tracks dropping the extension if the
+    # validator objects). Only passed when there is something to contain so the
+    # legacy output stays untouched.
+    image_kwargs: Dict[str, Any] = {}
+    if embedder is not None and embedder.binaries:
+        image_kwargs["contained"] = [_binary_from_record(r) for r in embedder.binaries]
+        image_kwargs["extension"] = [
+            Extension(url=EXT_IMAGE_REFERENCE, valueReference=Reference(reference=f"#{r.id}"))
+            for r in embedder.binaries
+        ]
+
     return Composition(
         id=comp_id,
+        **image_kwargs,
         meta=Meta(profile=profiles),
         status="final",
         type=CodeableConcept(coding=[
@@ -347,7 +439,8 @@ def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str) -
         section=fhir_sections
     )
 
-def generate_bundle(doc_list: List[Dict[str, Any]]) -> Bundle:
+def generate_bundle(doc_list: List[Dict[str, Any]],
+                    embedder: Optional[ImageEmbedder] = None) -> Bundle:
     bundle_id = str(uuid.uuid4())
     org_id = str(uuid.uuid4())
     med_prod_id = str(uuid.uuid4())
@@ -379,7 +472,7 @@ def generate_bundle(doc_list: List[Dict[str, Any]]) -> Bundle:
     list_entries = []
     
     for doc in doc_list:
-        comp = create_doc_composition(doc, med_prod_id, org_id)
+        comp = create_doc_composition(doc, med_prod_id, org_id, embedder=embedder)
         entries.append(BundleEntry(resource=comp, fullUrl=f"urn:uuid:{comp.id}"))
         
         # Add to List
@@ -485,6 +578,30 @@ def _json_to_xml(data: Union[Dict, List], root_tag: str) -> str:
     # Tags whose 'url' field is an XML attribute, not a child element.
     EXTENSION_TAGS = {"extension", "modifierExtension"}
 
+    # FHIR XML is order-sensitive: on a DomainResource the header elements
+    # MUST appear as id, meta, implicitRules, language, text, contained,
+    # extension, modifierExtension, then the resource's own elements
+    # (hl7.org/fhir/R4/domainresource.html). JSON is unordered, so the dict
+    # order from the model library is not a guarantee. The guard is applied
+    # only to resources that carry `contained` (P1-IMG-1, flag-on path) so the
+    # legacy serialisation stays byte-identical. Binary is a plain Resource
+    # (id, meta, implicitRules, language, then contentType, securityContext,
+    # data) — the same header prefix applies.
+    _DOMAIN_HEADER_ORDER = ("id", "meta", "implicitRules", "language", "text",
+                            "contained", "extension", "modifierExtension")
+
+    def _canonical_order(value: Dict) -> Dict:
+        if "contained" not in value and value.get("resourceType") != "Binary":
+            return value
+        if value.get("resourceType") == "Binary":
+            head = {k: value[k] for k in ("resourceType", "id", "meta", "implicitRules",
+                                           "language", "contentType", "securityContext", "data")
+                    if k in value}
+            return {**head, **{k: v for k, v in value.items() if k not in head}}
+        head = {k: value[k] for k in ("resourceType",) + _DOMAIN_HEADER_ORDER if k in value}
+        tail = {k: v for k, v in value.items() if k not in head}
+        return {**head, **tail}
+
     def serialize(tag: str, value, is_root: bool = False) -> str:
         """Recursively serialise one FHIR element."""
 
@@ -497,6 +614,7 @@ def _json_to_xml(data: Union[Dict, List], root_tag: str) -> str:
             return "".join(serialize(tag, item) for item in value)
 
         # ── Object (dict) ────────────────────────────────────────────────────
+        value = _canonical_order(value)
         # Build the opening tag with any required XML attributes
         attrs = ""
         if is_root:

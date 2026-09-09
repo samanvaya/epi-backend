@@ -7,6 +7,12 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# P1-IMG-2: LibreOffice Draw headless rasterises EMF/WMF -> PNG.
+# Pinned via the Debian release in the base image; a base bump is an IMG-impact change.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libreoffice-draw fonts-dejavu-core && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY requirements.txt .
@@ -25,6 +31,8 @@ RUN touch dummy.xml && \
 COPY main.py .
 COPY doc_parser.py .
 COPY fhir_mapper.py .
+# P1-IMG-1..4: contained Binary embedding of DOCX images (flag-gated).
+COPY image_embedder.py .
 COPY fhir_validator.py .
 COPY diff_engine.py .
 COPY repair_engine.py .

@@ -20,6 +20,10 @@ import diff_engine
 # but inert until `publish: true` is sent on a request and the tenant is on
 # `PUBLICATION_TENANTS_ALLOWLIST` (CLAUDE.md §5.7 per-tenant feature flag).
 import publication_service as pub
+# P1-IMG-1..4: DOCX images → Composition.contained Binary. Inert unless the
+# tenant is on `IMAGE_BINARIES_TENANTS_ALLOWLIST` (CLAUDE.md §5.7, default off);
+# flag-off output is byte-identical to v2.0.0.
+import image_embedder as img
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -144,8 +148,16 @@ def process_stateless(
                 "sections": sections
             }
 
+            # P1-IMG-4 feature flag, read next to the publish allowlist. When on,
+            # one ImageEmbedder serves the whole request: it rewrites the
+            # section text IN PLACE during create_doc_composition, so the
+            # source_text built below and generate_bundle both see `#id`
+            # references without a second embedding pass (idempotent no-op).
+            embedder = img.ImageEmbedder() if img.tenant_is_allowlisted(tenant_id) else None
+
             # 2. Map single document to FHIR Composition XML
-            comp = mapper.create_doc_composition(doc_obj, "urn:uuid:med-prod", "urn:uuid:org")
+            comp = mapper.create_doc_composition(doc_obj, "urn:uuid:med-prod", "urn:uuid:org",
+                                                 embedder=embedder)
             original_xml = mapper.resource_to_xml(comp)
 
             # Build source_text for fidelity scoring.
@@ -193,8 +205,10 @@ def process_stateless(
 
             validation_issues = [asdict(i) for i in (last_run.issues if last_run else [])]
 
-            # Build fix log across all iterations
-            fix_log = []
+            # Build fix log across all iterations. P1-IMG-4: image transforms
+            # happened at mapping time, before Phase 1, so they lead the log
+            # as `iteration: 0` rows with the same four keys as validator fixes.
+            fix_log = embedder.fix_log_rows() if embedder is not None else []
             for run in val_log.runs:
                 for fix in run.fixes_applied:
                     fix_log.append({
@@ -210,6 +224,20 @@ def process_stateless(
                 "total_iterations": iterations,
                 "runs": []
             }
+            # P1-IMG-4 (ALCOA+ Complete): the downloadable log carries the
+            # image transforms as an iteration-0 run WITH before/after
+            # snippets (source MIME / sha256 / bytes), which the four-key
+            # fix_log rows cannot hold. Flag-off: nothing is added.
+            if embedder is not None and embedder.actions:
+                val_log_data["runs"].append({
+                    "iteration": 0,
+                    "timestamp": "",
+                    "error_count": 0,
+                    "warning_count": 0,
+                    "info_count": 0,
+                    "issues": [],
+                    "fixes_applied": [asdict(a) for a in embedder.actions],
+                })
             for run in val_log.runs:
                 val_log_data["runs"].append({
                     "iteration": run.iteration,
@@ -231,7 +259,7 @@ def process_stateless(
                 diff_html = ""
 
             # 5. Generate FHIR Bundle (JSON + XML) from this document
-            bundle = mapper.generate_bundle([doc_obj])
+            bundle = mapper.generate_bundle([doc_obj], embedder=embedder)
             bundle_json = mapper.bundle_to_json(bundle)
             bundle_xml = mapper.bundle_to_xml(bundle)
 
