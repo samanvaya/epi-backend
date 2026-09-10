@@ -349,6 +349,7 @@ The narrative is rendered against `static/epi-standard.css` (11 pt Times New Rom
 - Use `class="epi-narrative"` on the outer wrapping div.
 - Use `<h1 class="epi-annex-title">` for Annex section titles, `<h2>` for SmPC numbered section titles, `<h3>` for sub-section titles.
 - Contain **no** inline `font-family`, `font-size`, `color`, `bgcolor`, or non-whitelisted classes. The whitelist is `_ALLOWED_CLASS_NAMES = {'epi-annex-title', 'epi-narrative'}` in `doc_parser.py`.
+- Underline is `<span style="text-decoration: underline">`, never `<u>` (not in the validator's XHTML whitelist — FHIR `txt-1`). `text-decoration` is the only text-style property allowed through `_ALLOWED_STYLE_PROPS`, and only with the value `underline` (EMA samples EPI-25-100 / EPI-23-1022; P0-3b, SME sign-off 2026-09-10).
 - Use `<br/>` (XHTML void self-closing), not `<br>`.
 - Every `<img>` MUST be `<img src="#<contained Binary id>" alt="<non-empty>"/>` — exactly those two attributes, self-closed. No `data:` URIs, no external URLs, no width/height/style. Missing alt gets `Figure N` **and** an `IMG-ALT-MISSING` audit row; it is never silently absent. (HL7 ePI Tech Style Guide § Images; EU IG `EUEpiComposition.contained`.)
 

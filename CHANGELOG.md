@@ -40,6 +40,7 @@ Operating rules for this file (see `CLAUDE.md` §4.3, §6.6, §8): every code ch
 - 
 
 ### Fixed
+- **P0-3b.** Underlined runs produced `<u>`, which the HL7 validator rejects (`Invalid element name in the XHTML ('u')` + `txt-1`). Underline is now emitted as `<span style="text-decoration: underline">` — the construct used by the EMA validated samples. `_ALLOWED_STYLE_PROPS` gains `text-decoration` limited to `underline` (SME sign-off 2026-09-10; CLAUDE.md §10 #5). New fixture `synthetic_smpc_underline.docx`, tests `tests/unit/test_underline_conformance.py`, `tests/contract/test_underline_smpc.py`.
 - **P0-3a.** SmPCs whose QRD section numbers exist only as Word automatic numbering (`numPr`) were rejected by the P0-2 gate with `422 … Detected 1 SmPC section anchor(s)` because mammoth drops automatic numbering. `read_docx` now materialises the resolved numbering label as text — only on paragraphs that then match an SmPC/PIL heading pattern — before mammoth runs. Typed-number documents are byte-identical (pre-pass is a no-op). New fixture `tests/fixtures/synthetic_smpc_autonum.docx` (+ generator), tests `tests/unit/test_autonumbered_headings.py`, `tests/contract/test_autonumbered_smpc.py`.
 
 ### Security

@@ -34,9 +34,16 @@ _ALLOWED_STYLE_PROPS = {
     'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
     'width',
     'vertical-align',
+    # P0-3b (SME sign-off 2026-09-10): underline as EMA emits it. `<u>` is not
+    # in the validator's XHTML whitelist (FHIR txt-1), the EMA samples
+    # EPI-25-100 / EPI-23-1022 use <span style="text-decoration: underline">.
+    # Value restricted to `underline` via _ALLOWED_TEXT_DECORATION_VALUES.
+    'text-decoration',
 }
 
 _ALLOWED_TEXT_ALIGN_VALUES = {'center', 'right', 'justify'}
+_ALLOWED_TEXT_DECORATION_VALUES = {'underline'}
+_UNDERLINE_STYLE = 'text-decoration: underline'
 
 _ALLOWED_CLASS_NAMES = {'epi-annex-title', 'epi-narrative'}
 
@@ -56,6 +63,10 @@ def _sanitize_style_attr(style_value: str) -> str:
             continue
         if prop == 'text-align' and val.lower() not in _ALLOWED_TEXT_ALIGN_VALUES:
             continue
+        if prop == 'text-decoration':
+            if val.lower() not in _ALLOWED_TEXT_DECORATION_VALUES:
+                continue
+            val = val.lower()
         out.append(f"{prop}: {val}")
     return "; ".join(out)
 
@@ -68,6 +79,15 @@ def _sanitize_html_styles(html_str: str) -> str:
     """
     if not html_str:
         return html_str
+
+    # 0. Underline (P0-3b): <u> is not a permitted XHTML element in a FHIR
+    #    narrative. Rewrite it — and the mammoth marker span — to the
+    #    style-attribute form the EMA samples use. The style then passes
+    #    through the whitelist in step 3 like any other allowed property.
+    html_str = re.sub(r'<u\b[^>]*>', f'<span style="{_UNDERLINE_STYLE}">', html_str, flags=re.IGNORECASE)
+    html_str = re.sub(r'</u\s*>', '</span>', html_str, flags=re.IGNORECASE)
+    html_str = re.sub(r'<span\s+class="epi-underline"\s*>', f'<span style="{_UNDERLINE_STYLE}">', html_str,
+                      flags=re.IGNORECASE)
 
     # 1. Unwrap <font> tags (keep their contents, drop the tag and all its attrs).
     html_str = re.sub(r'<font\b[^>]*>', '', html_str, flags=re.IGNORECASE)
@@ -674,9 +694,9 @@ def read_docx(file_path: str) -> str:
         docx_bytes = _materialise_qrd_numbering(docx_bytes)
         docx_file = io.BytesIO(docx_bytes)
         style_map = """
-        u => u
-        r[style-name='Underline'] => u
-        r[style-name='Hyperlink'] => u
+        u => span.epi-underline
+        r[style-name='Underline'] => span.epi-underline
+        r[style-name='Hyperlink'] => span.epi-underline
         p[style-name='Heading 1'] => h3:fresh
         p[style-name='Heading 2'] => h4:fresh
         p[style-name='Heading 3'] => h5:fresh

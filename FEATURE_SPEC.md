@@ -130,6 +130,14 @@ DOCX parsing uses `mammoth` with a `style_map` that promotes Word headings to `h
 - Given a heading whose text already begins with its number (e.g. typed `4.1 Therapeutic indications` that also carries `numPr`), then no second number is injected.
 - Given a `numPr` whose level format is `bullet`, then nothing is injected.
 
+**P0-3b. Underline conforms to FHIR `txt-1` (added 2026-09-10, SME sign-off: Syo).** The narrative may contain only the XHTML elements the HL7 validator whitelists; `<u>` is not one of them, so any underlined run in the source produced two validator errors (`Invalid element name in the XHTML ('u')` + the `txt-1` constraint). Underline is now expressed the way the EMA validated samples do (`resources/epi-25-100-sample/English_ePI_Sample_BundleCollection.xml`, `resources/epi-23-1022-sample/*`): `<span style="text-decoration: underline">…</span>`. The mammoth style map emits a marker (`span.epi-underline`) that `_sanitize_html_styles` rewrites to that span (stray `<u>` from any path is rewritten too), and `_ALLOWED_STYLE_PROPS` gains `text-decoration` restricted to the single value `underline` (CLAUDE.md §10 #5 cross-link: FHIR Narrative `txt-1` — "internally contained style attributes" are permitted; EMA samples above). Word hyperlinks remain rendered as underline only; the URL is not carried (Open Question 24).
+
+*Acceptance criteria:*
+- Given a DOCX with an underlined run (`tests/fixtures/synthetic_smpc_underline.docx`), when parsed, then the HTML contains `<span style="text-decoration: underline">` and no `<u` element anywhere.
+- Given `<u>x</u>` or `<span class="epi-underline">x</span>` fed to `_sanitize_html_styles`, then the output is `<span style="text-decoration: underline">x</span>`; the sanitiser is idempotent on its own output.
+- Given `style="text-decoration: line-through"` / `none` / `underline; color: red`, then only `text-decoration: underline` survives the whitelist.
+- Given the underline fixture posted to `POST /api/process_stateless`, then no issue mentions `Invalid element name in the XHTML ('u')`, `text-decoration: underline` appears in `xml`, and the response keeps the 21-field shape.
+
 *Acceptance criteria:*
 - Given a DOCX containing a table inside Section 4.8, when parsed, then the table HTML is preserved verbatim in `sections[i].text`.
 - Given a SmPC with Annex I/II/III, when parsed, Annex III labelling content is accumulated into the `labelling` (or `annex_iii`) section without being re-split by numeric sub-headers — the parser locks into `in_annex = True` once any of `{labelling, annex_i, annex_ii, annex_iii}` is matched (`doc_parser.py` lines 287-298).
@@ -401,6 +409,7 @@ Every P0 requirement is grounded in a specific module / function. Reviewers use 
 | P0-2. SmPC 422 gate | `main.py` | lines 71–82 (`_SMPC_ANCHOR_IDS`, `found_anchors`, `HTTPException(422)`) |
 | P0-3. DOCX/PDF parsing | `doc_parser.py` | `read_docx`, `read_pdf`, `RegexStrategy`, `LabellingStrategy`, `DocumentFactory.detect_type`, `_sanitize_html_styles`, `_elevate_annex_headers` |
 | P0-3a. Auto-numbered QRD headings | `doc_parser.py` | `_materialise_qrd_numbering`, `_WordNumbering` (numbering.xml / styles.xml resolver), `_format_number`; tests `tests/unit/test_autonumbered_headings.py`, `tests/contract/test_autonumbered_smpc.py`; fixture `synthetic_smpc_autonum.docx` |
+| P0-3b. Underline conformance (txt-1) | `doc_parser.py` | style map `span.epi-underline`; `_sanitize_html_styles` underline rewrite; `_ALLOWED_TEXT_DECORATION_VALUES`; tests `tests/unit/test_underline_conformance.py`, `tests/contract/test_underline_smpc.py`; fixture `synthetic_smpc_underline.docx` |
 | P0-4. FHIR mapping | `fhir_mapper.py` | `create_doc_composition`, `organize_qrd_sections`, `create_section`, `generate_bundle`, `RMS_SPOR_CODES`, `SMPC_SECTION_MAPPING` |
 | P0-5. Validator | `fhir_validator.py` | `FHIRValidator.validate_string`, `_parse_json_outcome`, `_parse_xml_outcome`, `_filter_config_issues`, `_PROFILE_NOT_FOUND_PATTERNS` |
 | P0-6. Two-phase pipeline | `fhir_validator.py` | `run_validation_pipeline`, `AutoFixer.fix`, `FidelityFixer.improve`, `_compute_fidelity`, `MAX_VALIDATION_ITERATIONS = 1`, `FIDELITY_TARGET = 99.0`, `MAX_FIDELITY_ITERATIONS = 5` |
@@ -453,6 +462,7 @@ A failing test in `test_e2e.py` (or `tests/contract/test_publication.py` for P1-
 21. **(Non-blocking — Engineering)** We emit `Composition.extension:imageReference` because the EU IG package defines it (0..\*), but the EMA validated sample EPI-25-100 does not use it. Confirm the validator is silent; if it warns, drop it following the §9.4 domain-extension precedent and record the decision here. Source: P1-IMG-1 D6.
 22. **(Non-blocking — Engineering + Reg SME)** No hard cap on Binary payload size in v1 (informational `IMG-SIZE-LARGE` at 1 MiB). What is EMA's bundle size limit for portal ingestion, and does Render's 30 s budget survive a 20-figure SmPC? Source: P1-IMG-2.
 23. **(Non-blocking — QA)** We need one real ChemDraw-exported EMF and one WMF from a design partner for `tests/fixtures/images/`. The synthetic corpus covers TIFF only. Source: P1-IMG-2 AC 5.
+24. **(Non-blocking — Regulatory + Engineering)** Word hyperlinks are emitted as underlined text only; the target URL is dropped. The EMA samples carry real `<a href>` links (`<a style="color: blue; text-decoration: underline">`). Should URLs in SmPC/PIL narrative be carried through, and who reviews them (external links in regulated text)? Source: P0-3b.
 
 ---
 
