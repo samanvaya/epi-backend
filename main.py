@@ -24,6 +24,8 @@ import publication_service as pub
 # tenant is on `IMAGE_BINARIES_TENANTS_ALLOWLIST` (CLAUDE.md §5.7, default off);
 # flag-off output is byte-identical to v2.0.0.
 import image_embedder as img
+# P0-4a / P0-8a: EMA-conformance behaviours behind per-tenant flags (CLAUDE.md §5.7).
+import feature_flags as flags
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -154,10 +156,15 @@ def process_stateless(
             # source_text built below and generate_bundle both see `#id`
             # references without a second embedding pass (idempotent no-op).
             embedder = img.ImageEmbedder() if img.tenant_is_allowlisted(tenant_id) else None
+            # P0-8a: borders from the stylesheet, not the XML (mapper AND Phase 1 fixer).
+            inline_table_borders = not flags.tenant_enabled(flags.CSS_TABLE_BORDERS, tenant_id)
+            # P0-4a: one `document` Bundle per Composition inside the `collection`.
+            nested_document_bundles = flags.tenant_enabled(flags.NESTED_DOCUMENT_BUNDLE, tenant_id)
 
             # 2. Map single document to FHIR Composition XML
             comp = mapper.create_doc_composition(doc_obj, "urn:uuid:med-prod", "urn:uuid:org",
-                                                 embedder=embedder)
+                                                 embedder=embedder,
+                                                 inline_table_borders=inline_table_borders)
             original_xml = mapper.resource_to_xml(comp)
 
             # Build source_text for fidelity scoring.
@@ -194,6 +201,7 @@ def process_stateless(
                 original_xml,
                 project_dir=project_dir,
                 source_text=source_text,
+                inline_table_borders=inline_table_borders,
             )
 
             last_run = val_log.runs[-1] if val_log.runs else None
@@ -259,7 +267,9 @@ def process_stateless(
                 diff_html = ""
 
             # 5. Generate FHIR Bundle (JSON + XML) from this document
-            bundle = mapper.generate_bundle([doc_obj], embedder=embedder)
+            bundle = mapper.generate_bundle([doc_obj], embedder=embedder,
+                                            inline_table_borders=inline_table_borders,
+                                            nested_document_bundles=nested_document_bundles)
             bundle_json = mapper.bundle_to_json(bundle)
             bundle_xml = mapper.bundle_to_xml(bundle)
 

@@ -81,7 +81,7 @@ SMPC_SECTION_MAPPING = {
 def create_narrative(div_content: str) -> Narrative:
     return Narrative(status="generated", div=div_content)
 
-def create_section(data: Dict[str, str]) -> CompositionSection:
+def create_section(data: Dict[str, str], inline_table_borders: bool = True) -> CompositionSection:
     sec_id = data.get("section_id")
     title = data.get("title")
     text_content = data.get("text")
@@ -143,19 +143,24 @@ def create_section(data: Dict[str, str]) -> CompositionSection:
         _CELL_BORDER_STYLE = "border: 1px solid black; padding: 4px;"
         _TABLE_STYLE = "border-collapse: collapse; width: 100%; border: 1px solid black;"
 
+        # P0-8a: when the tenant is on CSS_TABLE_BORDERS_TENANTS_ALLOWLIST the
+        # borders are the stylesheet's job (EMA: no presentation styling in
+        # the XML; EPI-25-100 carries bare <table>/<td>). Skip both injections.
         def _add_table_borders(m):
             attrs = re.sub(r'\bborder=["\'][^"\']*["\']', '', m.group(1) or '', flags=re.IGNORECASE)
             attrs = re.sub(r'\bstyle=["\'][^"\']*["\']', '', attrs, flags=re.IGNORECASE)
             attrs = re.sub(r'\bwidth=["\'][^"\']*["\']', '', attrs, flags=re.IGNORECASE)
             return f'<table {attrs.strip()} border="1" style="{_TABLE_STYLE}">'
-        clean_text = re.sub(r'<table\b([^>]*)>', _add_table_borders, clean_text, flags=re.IGNORECASE)
+        if inline_table_borders:
+            clean_text = re.sub(r'<table\b([^>]*)>', _add_table_borders, clean_text, flags=re.IGNORECASE)
 
         def _add_cell_borders(m):
             tag = m.group(1)
             existing = m.group(2) or ''
             existing = re.sub(r'\bstyle=["\'][^"\']*["\']', '', existing, flags=re.IGNORECASE)
             return f'<{tag} {existing.strip()} style="{_CELL_BORDER_STYLE}">'.replace('  ', ' ')
-        clean_text = re.sub(r'<(td|th)\b([^>]*)>', _add_cell_borders, clean_text, flags=re.IGNORECASE)
+        if inline_table_borders:
+            clean_text = re.sub(r'<(td|th)\b([^>]*)>', _add_cell_borders, clean_text, flags=re.IGNORECASE)
 
         # SEMANTIC ELEVATION: Annex sections render the title as <h1
         # class="epi-annex-title">; all other SmPC sections use <h2>. Because
@@ -210,12 +215,14 @@ def create_section(data: Dict[str, str]) -> CompositionSection:
     
     return CompositionSection(**start_kwargs)
 
-def organize_qrd_sections(sections_data: List[Dict[str, str]]) -> List[CompositionSection]:
+def organize_qrd_sections(sections_data: List[Dict[str, str]],
+                          inline_table_borders: bool = True) -> List[CompositionSection]:
     """
     Rule 6: QRD Template Structure
     Groups 4.x, 5.x, 6.x under synthetic parents, but preserves exact document ordering!
     """
-    flat_sections = {str(s.get("section_id", "")): create_section(s) for s in sections_data}
+    flat_sections = {str(s.get("section_id", "")): create_section(s, inline_table_borders=inline_table_borders)
+                     for s in sections_data}
     final_sections = []
     processed_ids = set()
     parents_created = {}
@@ -338,7 +345,8 @@ def _embed_images(sections_data: List[Dict[str, Any]], embedder: ImageEmbedder) 
 
 
 def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str,
-                           embedder: Optional[ImageEmbedder] = None) -> Composition:
+                           embedder: Optional[ImageEmbedder] = None,
+                           inline_table_borders: bool = True) -> Composition:
     doc_type = doc.get("type", "SmPC")
     filename = doc.get("filename", "unknown")
     sections_data = doc.get("sections", [])
@@ -355,9 +363,9 @@ def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str,
 
     # Rule 6: Group sections
     if doc_type == "SmPC":
-        fhir_sections = organize_qrd_sections(sections_data)
+        fhir_sections = organize_qrd_sections(sections_data, inline_table_borders=inline_table_borders)
     else:
-        fhir_sections = [create_section(sec) for sec in sections_data]
+        fhir_sections = [create_section(sec, inline_table_borders=inline_table_borders) for sec in sections_data]
     
     # Rule 12: Profiles
     profiles = [
@@ -439,8 +447,36 @@ def create_doc_composition(doc: Dict[str, Any], med_prod_id: str, org_id: str,
         section=fhir_sections
     )
 
+EU_BUNDLE_PROFILE = "http://ema.europa.eu/fhir/StructureDefinition/EUEpiBundle"
+
+
+def _document_bundle_for(comp: Composition, current_time,
+                         supporting: List["BundleEntry"]) -> "BundleEntry":
+    """P0-4a: wrap one Composition in its own `document` Bundle, as EMA sample
+    EPI-25-100 does — profile EUEpiBundle, own identifier + timestamp, the
+    Composition as entry[0]. `supporting` (placeholder Organization + MPD) is
+    appended after it so Composition.author / .subject resolve INSIDE the
+    document Bundle, which is what the validator checks (FHIR documents: every
+    resource the Composition references SHALL be in the document bundle).
+    The inner Bundle id equals the Composition id so that the List's
+    `urn:uuid:<comp.id>` item reference is also a top-level fullUrl of the
+    outer collection (EPI-25-100 does the same)."""
+    inner_id = comp.id
+    inner = Bundle(
+        id=inner_id,
+        meta=Meta(profile=[EU_BUNDLE_PROFILE]),
+        identifier=Identifier(system="urn:uuid", value=inner_id),
+        type="document",
+        timestamp=current_time,  # placeholder: EUEpiBundle defines this as the date of approval
+        entry=[BundleEntry(resource=comp, fullUrl=f"urn:uuid:{comp.id}")] + list(supporting),
+    )
+    return BundleEntry(resource=inner, fullUrl=f"urn:uuid:{inner_id}")
+
+
 def generate_bundle(doc_list: List[Dict[str, Any]],
-                    embedder: Optional[ImageEmbedder] = None) -> Bundle:
+                    embedder: Optional[ImageEmbedder] = None,
+                    inline_table_borders: bool = True,
+                    nested_document_bundles: bool = False) -> Bundle:
     bundle_id = str(uuid.uuid4())
     org_id = str(uuid.uuid4())
     med_prod_id = str(uuid.uuid4())
@@ -455,7 +491,9 @@ def generate_bundle(doc_list: List[Dict[str, Any]],
         name="Marketing Authorisation Holder (Placeholder)",
         identifier=[Identifier(system="http://ema.europa.eu/fhir/mpd/marketing-authorisation-holder", value="LOC-10001")]
     )
-    entries.append(BundleEntry(resource=org, fullUrl=f"urn:uuid:{org_id}")) # Rule 5: UUID refs
+    org_entry = BundleEntry(resource=org, fullUrl=f"urn:uuid:{org_id}")  # Rule 5: UUID refs
+    if not nested_document_bundles:
+        entries.append(org_entry)
     
     # 2. MedicinalProductDefinition
     med_prod = MedicinalProductDefinition(
@@ -463,7 +501,12 @@ def generate_bundle(doc_list: List[Dict[str, Any]],
         name=[{"productName": "Placeholder Product 500mg Tablets"}],
         status=CodeableConcept(coding=[Coding(system="http://ema.europa.eu/fhir/mpd/status", code="200000005004", display="Current")])
     )
-    entries.append(BundleEntry(resource=med_prod, fullUrl=f"urn:uuid:{med_prod_id}"))
+    mpd_entry = BundleEntry(resource=med_prod, fullUrl=f"urn:uuid:{med_prod_id}")
+    if not nested_document_bundles:
+        entries.append(mpd_entry)
+    # P0-4a: in nested mode the placeholders ride inside each document Bundle
+    # (Open Question 25, option b) and the outer collection is List + documents
+    # only — the EPI-25-100 shape.
     
     # 3. Compositions & List
     # Rule 25: PI List present.
@@ -472,8 +515,15 @@ def generate_bundle(doc_list: List[Dict[str, Any]],
     list_entries = []
     
     for doc in doc_list:
-        comp = create_doc_composition(doc, med_prod_id, org_id, embedder=embedder)
-        entries.append(BundleEntry(resource=comp, fullUrl=f"urn:uuid:{comp.id}"))
+        comp = create_doc_composition(doc, med_prod_id, org_id, embedder=embedder,
+                                      inline_table_borders=inline_table_borders)
+        if nested_document_bundles:
+            # P0-4a (flag-gated): one `document` Bundle per Composition inside
+            # the `collection`. The List still references the Composition's
+            # own fullUrl, which is entry[0].fullUrl of the inner Bundle.
+            entries.append(_document_bundle_for(comp, current_time, [org_entry, mpd_entry]))
+        else:
+            entries.append(BundleEntry(resource=comp, fullUrl=f"urn:uuid:{comp.id}"))
         
         # Add to List
         # Rule 13: Language Extension in List item
@@ -516,9 +566,16 @@ def generate_bundle(doc_list: List[Dict[str, Any]],
     
     bundle_type = "collection" # Safe default for container
     
+    bundle_kwargs: Dict[str, Any] = {}
+    if not nested_document_bundles:
+        # Flag-off: unchanged. Flag-on: EUEpiBundle is a *document* profile
+        # (type patternCode "document", Composition slice 1..1) — it belongs
+        # on the inner Bundles only; EPI-25-100's outer collection carries no
+        # meta.profile.
+        bundle_kwargs["meta"] = Meta(profile=["http://ema.europa.eu/fhir/StructureDefinition/EUEpiBundle"])
     bundle = Bundle(
         id=bundle_id,
-        meta=Meta(profile=["http://ema.europa.eu/fhir/StructureDefinition/EUEpiBundle"]),
+        **bundle_kwargs,
         type=bundle_type,
         timestamp=current_time,
         identifier=Identifier(system="urn:uuid", value=bundle_id),

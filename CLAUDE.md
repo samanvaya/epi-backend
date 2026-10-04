@@ -7,7 +7,7 @@
 - **Portable system prompt.** §1, §2, §4, §5, §10, §11 alone are usable as a Claude API / Claude Code system prompt outside Cowork.
 - **Living document.** When the spec changes, the doctrine changes, or a new bright line is needed, update this file *first* — then change the code.
 
-**Last updated:** 2026-09-08 · **Owner:** Syo · **Version:** 1.1
+**Last updated:** 2026-10-04 · **Owner:** Syo · **Version:** 1.2
 
 ---
 
@@ -46,6 +46,7 @@ Claude knows this repo. The canonical engineering inventory:
 - **`main.py`** — FastAPI app, single endpoint `POST /api/process_stateless`, `GET /health`. SmPC structural gate (HTTP 422 when fewer than 2 SmPC anchor IDs detected). 21-field JSON response.
 - **`doc_parser.py`** — DOCX (mammoth) + PDF (pypdf) parsing. Strategy pattern (`SmPCStrategy`, `PILStrategy`, `LabellingStrategy`) selected via `DocumentFactory.detect_type`. Aggressive HTML sanitiser (`_sanitize_html_styles`) enforcing the static-styling contract. Annex header elevation. `convert_image` emits `data:` URIs as the parser-level intermediate. `_materialise_qrd_numbering` turns Word automatic numbering on QRD headings into literal text before mammoth (P0-3a) — headings only, never body lists.
 - **`fhir_mapper.py`** — Composition + Bundle synthesis. SPOR-coded Composition.type with LOINC `55106-9` fallback. `Bundle.type = "collection"` containing a `List` resource. Domain extension currently commented out. Images → `Composition.contained` Binary + `extension:imageReference` when an `ImageEmbedder` is passed (P1-IMG-1).
+- **`feature_flags.py`** — `tenant_enabled(env_var, tenant_id)`: the one reader for comma-separated per-tenant allowlists (CLAUDE.md §5.7). Used by `NESTED_DOCUMENT_BUNDLE_TENANTS_ALLOWLIST` (P0-4a) and `CSS_TABLE_BORDERS_TENANTS_ALLOWLIST` (P0-8a); the older `PUBLICATION_*` / `IMAGE_BINARIES_*` readers are unchanged.
 - **`image_embedder.py`** — P1-IMG. `ImageEmbedder` rewrites `<img src="data:…">` → `<img src="#img-<sha256[:32]>" alt="…"/>`, collects `BinaryRecord`s for `Composition.contained`, rasterises non-web-safe formats to PNG (Pillow; LibreOffice Draw headless for EMF/WMF), emits `ImageAction` audit rows (`IMG-*`). Deterministic ids; idempotent.
 - **`fhir_validator.py`** — Two-phase pipeline. Phase 1: HL7 `validator_cli.jar` against `hl7.eu.fhir.epil` IG, with `validator.fhir.org` and `hapi.fhir.org` HTTP fallbacks; `MAX_VALIDATION_ITERATIONS = 1` (Render budget). Phase 2: `FidelityFixer` with `FIDELITY_TARGET = 99.0` and `MAX_FIDELITY_ITERATIONS = 5`.
 - **`diff_engine.py`** — HTML diff with `.diff-equal / .diff-add / .diff-del` spans.
@@ -355,13 +356,19 @@ The narrative is rendered against `static/epi-standard.css` (11 pt Times New Rom
 
 ### 9.4 FHIR mapping rules
 
+*Bundle shape amended 2026-10-04 after EMA Service Desk feedback (RITM0323900 / ASK-299870, 30 Sep 2026) and re-reading EMA sample EPI-25-100 (`resources/epi-25-100-sample/English_ePI_Sample_BundleCollection.xml`). See `claude/EMA_FEEDBACK_ASSESSMENT_2026-10-04.md` in the project.*
+
 - `Composition.type` carries SPOR coding (`100000155538` for SmPC) **plus** LOINC `55106-9` to satisfy the validator's "type recommended to come from value set" info-level finding. Do not remove the LOINC code without explicit approval.
-- `Bundle.type = "collection"`. Not `"document"`. Reason: a document Bundle cannot legally contain a `List` resource, and Rule 25 of the EMA convention requires List.
-- `Bundle.entry[0]` is the `List` resource. Order matters: `List`, then `Organization` (placeholder MAH), then `MedicinalProductDefinition` (placeholder), then Compositions.
+- **Bundle shape — two levels, matching EPI-25-100.** The outer Bundle is `type = "collection"` and carries the `List` (Rule 25). Each Composition is wrapped in its **own inner Bundle with `type = "document"`**, profiled `http://ema.europa.eu/fhir/StructureDefinition/EUEpiBundle`, with its own `identifier` and `timestamp`, and the Composition as `entry[0]`. EMA: *"each image should be referenced as a binary contained resource, with one document-type bundle corresponding to one composition."* The earlier rule "`collection`, not `document`" rested on the false premise that the two were exclusive; the sample shows a `collection` *of* `document` Bundles, and a document Bundle never contains the `List`.
+- **Outer entry order:** `List` first (its `entry.item` references each Composition by `urn:uuid` `fullUrl`), then one inner `document` Bundle per Composition. Each inner Bundle's `id` equals its Composition's id, so `urn:uuid:<id>` is both the List item reference and a top-level `fullUrl`.
+- **Placeholders.** EPI-25-100 carries **no** `Organization` or `MedicinalProductDefinition` entries. In nested mode ours ride **inside each document Bundle after the Composition** — a document Bundle must contain every resource its Composition references, so `author` / `subject` resolve where the validator looks — and leave the outer level. Dropping them altogether once real MAH / MPD data lands is Open Question 25. The outer `collection` carries **no** `meta.profile` (`EUEpiBundle` is a document profile).
+- **Transition.** The nested shape is implemented (P0-4a) behind `NESTED_DOCUMENT_BUNDLE_TENANTS_ALLOWLIST` (CLAUDE.md §5.7); `original_xml` / `xml` (the Composition) are unaffected, only `bundle_json` / `bundle_xml` change. Flag-off output stays byte-identical until the flag is removed, which additionally requires one recorded `validator_cli.jar` run on a flag-on `bundle_xml` (the pipeline validates only the Composition).
 - The `domain` extension on `Composition.subject` is currently commented out (validator flags as unknown). Restore only when the IG package recognises it; track via spec §8 question.
 - Section 4 / 5 / 6 are grouped under synthetic parents (`organize_qrd_sections`), preserving document order.
+- `Composition.section.title` is the plain heading text **with its QRD number**, `<number>[space]<text>` (`1. NAME OF THE MEDICINAL PRODUCT`, `4.1 Therapeutic indications`) — a FHIR `string`, so never HTML, never styling. Numbers that exist only as Word automatic numbering are materialised by P0-3a. (EMA, point 1.)
 - Preface content goes to `Composition.text.div` (Option B), not a synthetic section.
-- Images live in `Composition.contained` as `Binary { id, contentType, data }` — never as separate Bundle entries, never as `data:` URIs — matching EMA sample EPI-25-100. `id = "img-" + sha256(final bytes)[:32]`; identical bytes share one Binary.
+- **No QRD presentation styling in the XML** (EMA, point 3): font, size, weight, margins, spacing, heading styles and table borders are the stylesheet's job (`static/epi-standard.css`, served via `css_href`). The narrative carries styling only where it conveys meaning and the EMA sample itself uses it (`text-align: center`, `text-decoration: underline`, `colspan`). The table/cell border injection (mapper `create_section` **and** Phase 1 `UI_FORMAT_TABLE_BORDERS`) is switched off per tenant by `CSS_TABLE_BORDERS_TENANTS_ALLOWLIST` (P0-8a); the fixer still strips attributes the validator rejects and logs `XHTML_TABLE_ATTRS_STRIPPED`. §9.3 governs the element/attribute whitelist.
+- Images live in `Composition.contained` as `Binary { id, contentType, data }` — never as separate Bundle entries, never as `data:` URIs — matching EMA sample EPI-25-100 and the EMA reply (point 2). `id = "img-" + sha256(final bytes)[:32]`; identical bytes share one Binary. `<img>` carries `src="#<id>"` and a meaningful `alt`. The feature is tenant-flagged; **a submission-bound tenant must have `IMAGE_BINARIES_TENANTS_ALLOWLIST` set.**
 - `Binary.contentType` MUST be one of `image/png | image/jpeg | image/svg+xml` after rasterisation; anything else is a flagged fallback (`IMG-FORMAT-UNSUPPORTED`), not a silent pass.
 - One `Composition.extension` `ext-epi-image-reference` per Binary, `valueReference = "#<id>"`, same order as `contained`.
 

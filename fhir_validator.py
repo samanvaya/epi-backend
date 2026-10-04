@@ -282,7 +282,15 @@ class FHIRValidator:
 # --- Auto-Fixer ---
 
 class AutoFixer:
-    """Applies heuristic fixes to common FHIR XML validation errors."""
+    """Applies heuristic fixes to common FHIR XML validation errors.
+
+    `inline_table_borders=False` (P0-8a, tenant flag CSS_TABLE_BORDERS_TENANTS_ALLOWLIST)
+    turns off the `UI_FORMAT_TABLE_BORDERS` injection: borders then come from
+    `static/epi-standard.css`, as EMA requires presentation styling to.
+    """
+
+    def __init__(self, inline_table_borders: bool = True):
+        self.inline_table_borders = inline_table_borders
 
     def fix(self, xml_string: str, issues: List[ValidationIssue]) -> Tuple[str, List[FixAction]]:
         """Apply all applicable fixes and return (fixed_xml, actions_taken)."""
@@ -506,6 +514,7 @@ class AutoFixer:
     def _fix_table_borders(self, xml: str, issues: List[ValidationIssue]) -> Tuple[str, List[FixAction]]:
         """Normalize tables to ensure layout-agnostic visual borders (EMA ePI convention)."""
         fixes = []
+        original_xml = xml
 
         # Step 1: Strip old/invalid presentation attributes causing validator complaints
         invalid_attrs = ['cellspacing', 'cellpadding', 'valign']
@@ -518,6 +527,18 @@ class AutoFixer:
         # Step 2: Inject CSS borders on <table>, <td>, and <th> elements.
         # The deprecated HTML border="1" attribute is kept as a fallback but
         # explicit CSS borders are required for strict XHTML/FHIR renderers.
+        # P0-8a: skipped when the tenant takes borders from the stylesheet.
+        # The step-1 strip above is still a transform and must be audited
+        # (flag-off relies on step 2's UI_FORMAT_TABLE_BORDERS row instead).
+        if not self.inline_table_borders:
+            if xml != original_xml:
+                fixes.append(FixAction(
+                    rule="XHTML_TABLE_ATTRS_STRIPPED",
+                    location="table elements",
+                    description="Removed cellspacing/cellpadding/valign attributes the validator rejects "
+                                "(table borders come from the stylesheet — P0-8a)",
+                ))
+            return xml, fixes
         table_pat = re.compile(r'<table\b([^>]*)>', re.IGNORECASE)
         original_count = len(table_pat.findall(xml))
 
@@ -896,6 +917,7 @@ def run_validation_pipeline(
     fhir_version: str = "4.0.1",
     progress_callback=None,
     source_text: str = "",
+    inline_table_borders: bool = True,
 ) -> Tuple[str, ValidationLog, str, float]:
     """
     Two-phase pipeline:
@@ -923,7 +945,7 @@ def run_validation_pipeline(
         fidelity_score is 0.0 when source_text is empty.
     """
     fhir_validator_obj = FHIRValidator(project_dir)
-    fixer = AutoFixer()
+    fixer = AutoFixer(inline_table_borders=inline_table_borders)
     fidelity_fixer = FidelityFixer()
     log = ValidationLog(project_dir)
 
