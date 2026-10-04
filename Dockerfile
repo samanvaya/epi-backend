@@ -33,6 +33,8 @@ COPY doc_parser.py .
 COPY fhir_mapper.py .
 # P1-IMG-1..4: contained Binary embedding of DOCX images (flag-gated).
 COPY image_embedder.py .
+# P0-4a / P0-8a: per-tenant flag reader.
+COPY feature_flags.py .
 COPY fhir_validator.py .
 COPY diff_engine.py .
 COPY repair_engine.py .
